@@ -12,11 +12,11 @@ frontend:
     preBuild:
       commands:
         # Install website dependencies
-        - cd website && npm ci
+        - npm ci --prefix website
     build:
       commands:
         # Build the website
-        - cd website && npm run build
+        - npm run build --prefix website
   artifacts:
     # Vite outputs to dist/ by default
     baseDirectory: website/dist
