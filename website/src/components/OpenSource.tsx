@@ -29,7 +29,7 @@ export default function OpenSource() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="https://github.com/anthist/anthist"
+            href="https://github.com/leo-hammett/anthist"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 bg-white text-indigo-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-colors"
@@ -40,7 +40,7 @@ export default function OpenSource() {
             Star on GitHub
           </a>
           <a
-            href="https://github.com/anthist/anthist/blob/main/CONTRIBUTING.md"
+            href="https://github.com/leo-hammett/anthist/blob/main/CONTRIBUTING.md"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-white/20 transition-colors"

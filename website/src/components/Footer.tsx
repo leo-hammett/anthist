@@ -15,7 +15,7 @@ export default function Footer() {
             </p>
             <div className="flex gap-4">
               <a
-                href="https://github.com/anthist/anthist"
+                href="https://github.com/leo-hammett/anthist"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-500 hover:text-white transition-colors"
@@ -55,7 +55,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://github.com/anthist/anthist"
+                  href="https://github.com/leo-hammett/anthist"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm hover:text-white transition-colors"

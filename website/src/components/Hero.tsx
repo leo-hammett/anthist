@@ -50,7 +50,7 @@ export default function Hero() {
             <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
           </a>
           <a
-            href="https://github.com/anthist/anthist"
+            href="https://github.com/leo-hammett/anthist"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 px-8 py-4 rounded-full font-semibold text-lg border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all"

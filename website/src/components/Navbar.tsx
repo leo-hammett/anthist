@@ -37,7 +37,7 @@ export default function Navbar() {
             Pricing
           </a>
           <a
-            href="https://github.com/anthist/anthist"
+            href="https://github.com/leo-hammett/anthist"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
@@ -82,7 +82,7 @@ export default function Navbar() {
               Pricing
             </a>
             <a
-              href="https://github.com/anthist/anthist"
+              href="https://github.com/leo-hammett/anthist"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-600 hover:text-gray-900 transition-colors font-medium py-2"

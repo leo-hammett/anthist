@@ -1,9 +1,6 @@
-import { create } from 'zustand';
-import { generateClient } from 'aws-amplify/data';
 import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { create } from 'zustand';
+import { amplifyClient } from '../amplify-client';
 
 // Generate a random importer email address
 function generateImporterEmail(): string {
@@ -55,7 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const attributes = await fetchUserAttributes();
       
       // Try to fetch existing user profile
-      const { data: existingUser } = await client.models.User.get({
+      const { data: existingUser } = await amplifyClient.models.User.get({
         cognitoId: cognitoUser.userId,
       });
 
@@ -90,7 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       const importerEmail = generateImporterEmail();
       
-      const { data: newUser, errors } = await client.models.User.create({
+      const { data: newUser, errors } = await amplifyClient.models.User.create({
         cognitoId: cognitoUser.userId,
         email: attributes.email ?? '',
         importerEmail,
@@ -140,7 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
 
     try {
-      const { data: updatedUser, errors } = await client.models.User.update({
+      const { data: updatedUser, errors } = await amplifyClient.models.User.update({
         cognitoId: user.cognitoId,
         ...settings,
       });
