@@ -1,18 +1,19 @@
+import { confirmSignUp, signIn, signUp } from 'aws-amplify/auth';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  useColorScheme,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { signUp, confirmSignUp, signIn } from 'aws-amplify/auth';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 import { useAuthStore } from '../../lib/store/authStore';
 
 type Step = 'signup' | 'confirm';
@@ -112,7 +113,9 @@ export default function SignupScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logoEmoji}>📚</Text>
+          <View style={[styles.logoContainer, isDark && styles.logoContainerDark]}>
+            <IconSymbol name="books.vertical.fill" size={48} color="#3B82F6" />
+          </View>
           <Text style={[styles.title, isDark && styles.titleDark]}>
             {step === 'signup' ? 'Create Account' : 'Verify Email'}
           </Text>
@@ -257,9 +260,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoEmoji: {
-    fontSize: 48,
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  logoContainerDark: {
+    backgroundColor: '#1E3A5F',
   },
   title: {
     fontSize: 28,

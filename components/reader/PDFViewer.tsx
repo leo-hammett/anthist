@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, useColorScheme, ActivityIndicator, Dimensions, Platform, Linking, Pressable } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { getUrl } from 'aws-amplify/storage';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Content } from '../../lib/store/feedStore';
+import { IconSymbol } from '../ui/icon-symbol';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -71,7 +72,9 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
     return (
       <View style={[styles.container, isDark && styles.containerDark]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorEmoji}>📄</Text>
+          <View style={[styles.errorIconContainer, isDark && styles.errorIconContainerDark]}>
+            <IconSymbol name="doc.fill" size={48} color={isDark ? '#888' : '#666'} />
+          </View>
           <Text style={[styles.title, isDark && styles.titleDark]}>
             {content.title}
           </Text>
@@ -218,9 +221,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  errorEmoji: {
-    fontSize: 64,
+  errorIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 24,
+  },
+  errorIconContainerDark: {
+    backgroundColor: '#1A1A1A',
   },
   title: {
     fontSize: 20,

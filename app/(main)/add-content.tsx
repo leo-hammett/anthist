@@ -12,6 +12,7 @@ import {
     useColorScheme,
     View,
 } from 'react-native';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 import { detectContentType, isValidUrl } from '../../lib/content/extractor';
 import { useAuthStore } from '../../lib/store/authStore';
 
@@ -148,7 +149,9 @@ export default function AddContentScreen() {
             style={[styles.importOption, isDark && styles.importOptionDark]}
             onPress={handleImportBookmarks}
           >
-            <Text style={styles.importIcon}>📑</Text>
+            <View style={styles.importIconContainer}>
+              <IconSymbol name="bookmark.fill" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
+            </View>
             <View style={styles.importContent}>
               <Text style={[styles.importTitle, isDark && styles.importTitleDark]}>
                 Import Bookmarks
@@ -163,7 +166,9 @@ export default function AddContentScreen() {
             style={[styles.importOption, isDark && styles.importOptionDark]}
             onPress={handleImportPDF}
           >
-            <Text style={styles.importIcon}>📄</Text>
+            <View style={styles.importIconContainer}>
+              <IconSymbol name="doc.fill" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
+            </View>
             <View style={styles.importContent}>
               <Text style={[styles.importTitle, isDark && styles.importTitleDark]}>
                 Upload PDF
@@ -178,7 +183,9 @@ export default function AddContentScreen() {
         {/* Email import hint */}
         <View style={styles.section}>
           <View style={[styles.hintCard, isDark && styles.hintCardDark]}>
-            <Text style={styles.hintIcon}>💡</Text>
+            <View style={styles.hintIconContainer}>
+              <IconSymbol name="lightbulb.fill" size={24} color={isDark ? '#FCD34D' : '#F59E0B'} />
+            </View>
             <View style={styles.hintContent}>
               <Text style={[styles.hintTitle, isDark && styles.hintTitleDark]}>
                 Pro tip: Email links
@@ -295,8 +302,13 @@ const styles = StyleSheet.create({
   importOptionDark: {
     backgroundColor: '#1A1A1A',
   },
-  importIcon: {
-    fontSize: 32,
+  importIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
   importContent: {
@@ -327,8 +339,7 @@ const styles = StyleSheet.create({
   hintCardDark: {
     backgroundColor: '#422006',
   },
-  hintIcon: {
-    fontSize: 24,
+  hintIconContainer: {
     marginRight: 12,
   },
   hintContent: {

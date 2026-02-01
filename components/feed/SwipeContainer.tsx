@@ -1,7 +1,8 @@
 import React, { useCallback, useRef } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
+import { interpolate } from 'react-native-reanimated';
 import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
-import { useFeedStore, Content } from '../../lib/store/feedStore';
+import { Content, useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
 import ContentCard from './ContentCard';
 import EmptyFeed from './EmptyFeed';
@@ -69,6 +70,36 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
     return <EmptyFeed onDoubleTap={onDoubleTap} />;
   }
 
+  // Custom animation: fullscreen at rest, subtle scale during swipe
+  const customAnimation = useCallback((value: number) => {
+    'worklet';
+    // value: -1 = previous card, 0 = current card, 1 = next card
+    // Only apply subtle scale during active swiping
+    const scale = interpolate(
+      value,
+      [-1, 0, 1],
+      [0.95, 1, 0.95]
+    );
+    const opacity = interpolate(
+      value,
+      [-1, 0, 1],
+      [0.5, 1, 0.5]
+    );
+    const translateX = interpolate(
+      value,
+      [-1, 0, 1],
+      [-SCREEN_WIDTH, 0, SCREEN_WIDTH]
+    );
+
+    return {
+      transform: [
+        { translateX },
+        { scale },
+      ],
+      opacity,
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       <Carousel
@@ -86,13 +117,9 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
             onTap={handleTap}
           />
         )}
-        // Smooth, delightful animation
-        scrollAnimationDuration={400}
-        mode="parallax"
-        modeConfig={{
-          parallaxScrollingScale: 0.9,
-          parallaxScrollingOffset: 50,
-        }}
+        // Smooth animation - fullscreen content with subtle swipe effect
+        scrollAnimationDuration={300}
+        customAnimation={customAnimation}
       />
     </View>
   );

@@ -1,18 +1,19 @@
+import { signIn } from 'aws-amplify/auth';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  useColorScheme,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { signIn } from 'aws-amplify/auth';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 import { useAuthStore } from '../../lib/store/authStore';
 
 export default function LoginScreen() {
@@ -59,7 +60,9 @@ export default function LoginScreen() {
       >
         {/* Logo / Header */}
         <View style={styles.header}>
-          <Text style={styles.logoEmoji}>📚</Text>
+          <View style={[styles.logoContainer, isDark && styles.logoContainerDark]}>
+            <IconSymbol name="books.vertical.fill" size={48} color="#3B82F6" />
+          </View>
           <Text style={[styles.title, isDark && styles.titleDark]}>Anthist</Text>
           <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
             Your personal anthology
@@ -150,9 +153,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  logoEmoji: {
-    fontSize: 64,
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 24,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  logoContainerDark: {
+    backgroundColor: '#1E3A5F',
   },
   title: {
     fontSize: 36,

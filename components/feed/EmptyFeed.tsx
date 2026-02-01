@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { useColorScheme } from 'react-native';
+import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { IconSymbol } from '../ui/icon-symbol';
 
 interface EmptyFeedProps {
   onDoubleTap: () => void;
@@ -15,7 +15,7 @@ export default function EmptyFeed({ onDoubleTap }: EmptyFeedProps) {
       <View style={styles.content}>
         {/* Animated illustration placeholder */}
         <View style={[styles.illustration, isDark && styles.illustrationDark]}>
-          <Text style={styles.illustrationEmoji}>📚</Text>
+          <IconSymbol name="books.vertical.fill" size={48} color={isDark ? '#888' : '#666'} />
         </View>
 
         <Text style={[styles.title, isDark && styles.titleDark]}>
@@ -29,7 +29,7 @@ export default function EmptyFeed({ onDoubleTap }: EmptyFeedProps) {
         <View style={styles.instructionsContainer}>
           <View style={styles.instruction}>
             <View style={[styles.instructionIcon, isDark && styles.instructionIconDark]}>
-              <Text style={styles.instructionEmoji}>📤</Text>
+              <IconSymbol name="square.and.arrow.up" size={24} color={isDark ? '#AAA' : '#666'} />
             </View>
             <View style={styles.instructionText}>
               <Text style={[styles.instructionTitle, isDark && styles.instructionTitleDark]}>
@@ -43,7 +43,7 @@ export default function EmptyFeed({ onDoubleTap }: EmptyFeedProps) {
 
           <View style={styles.instruction}>
             <View style={[styles.instructionIcon, isDark && styles.instructionIconDark]}>
-              <Text style={styles.instructionEmoji}>📧</Text>
+              <IconSymbol name="envelope.fill" size={24} color={isDark ? '#AAA' : '#666'} />
             </View>
             <View style={styles.instructionText}>
               <Text style={[styles.instructionTitle, isDark && styles.instructionTitleDark]}>
@@ -57,7 +57,7 @@ export default function EmptyFeed({ onDoubleTap }: EmptyFeedProps) {
 
           <View style={styles.instruction}>
             <View style={[styles.instructionIcon, isDark && styles.instructionIconDark]}>
-              <Text style={styles.instructionEmoji}>📑</Text>
+              <IconSymbol name="bookmark.fill" size={24} color={isDark ? '#AAA' : '#666'} />
             </View>
             <View style={styles.instructionText}>
               <Text style={[styles.instructionTitle, isDark && styles.instructionTitleDark]}>
@@ -108,9 +108,6 @@ const styles = StyleSheet.create({
   illustrationDark: {
     backgroundColor: '#1A1A1A',
   },
-  illustrationEmoji: {
-    fontSize: 48,
-  },
   title: {
     fontSize: 28,
     fontWeight: '700',
@@ -151,9 +148,6 @@ const styles = StyleSheet.create({
   },
   instructionIconDark: {
     backgroundColor: '#1A1A1A',
-  },
-  instructionEmoji: {
-    fontSize: 24,
   },
   instructionText: {
     flex: 1,

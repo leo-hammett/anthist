@@ -4,6 +4,7 @@ import { FlatList, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, useC
 import SwipeContainer from '../../components/feed/SwipeContainer';
 import { getAllThemes, getDefaultTheme, getThemeForContent, getThemesByCategory, ReaderTheme } from '../../components/themes';
 import OnboardingOverlay from '../../components/tutorial/OnboardingOverlay';
+import { IconSymbol, IconSymbolName } from '../../components/ui/icon-symbol';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
@@ -182,32 +183,32 @@ export default function FeedScreen() {
             </View>
 
             <MenuItem 
-              icon="⚙️" 
+              icon="gearshape.fill" 
               label="Settings" 
               onPress={navigateToSettings}
               isDark={isDark}
             />
             <MenuItem 
-              icon="📚" 
+              icon="books.vertical.fill" 
               label="My Content" 
               onPress={navigateToContentList}
               isDark={isDark}
             />
             <MenuItem 
-              icon="➕" 
+              icon="plus.circle.fill" 
               label="Add Content" 
               onPress={navigateToAddContent}
               isDark={isDark}
             />
             <MenuItem 
-              icon="📋" 
+              icon="doc.on.clipboard.fill" 
               label="Copy Source Link" 
               onPress={handleCopySourceLink}
               isDark={isDark}
               disabled={!getCurrentContent()}
             />
             <MenuItem 
-              icon="🎨" 
+              icon="paintpalette.fill" 
               label="Change Theme" 
               onPress={handleOpenThemeSelector}
               isDark={isDark}
@@ -255,23 +256,37 @@ export default function FeedScreen() {
 
             {/* Category Tabs */}
             <View style={styles.categoryTabs}>
-              {(['dark', 'light', 'specialty'] as const).map((cat) => (
-                <Pressable
-                  key={cat}
-                  style={[
-                    styles.categoryTab,
-                    selectedCategory === cat && { backgroundColor: currentTheme.accentColor },
-                  ]}
-                  onPress={() => setSelectedCategory(cat)}
-                >
-                  <Text style={[
-                    styles.categoryTabText,
-                    { color: selectedCategory === cat ? '#FFFFFF' : (isDark ? '#AAAAAA' : '#666666') },
-                  ]}>
-                    {cat === 'specialty' ? '✨ Special' : cat === 'dark' ? '🌙 Dark' : '☀️ Light'}
-                  </Text>
-                </Pressable>
-              ))}
+              {(['dark', 'light', 'specialty'] as const).map((cat) => {
+                const isSelected = selectedCategory === cat;
+                const iconColor = isSelected ? '#FFFFFF' : (isDark ? '#AAAAAA' : '#666666');
+                const iconName: IconSymbolName = cat === 'specialty' 
+                  ? 'sparkles' 
+                  : cat === 'dark' 
+                    ? 'moon.fill' 
+                    : 'sun.max.fill';
+                const label = cat === 'specialty' ? 'Special' : cat === 'dark' ? 'Dark' : 'Light';
+                
+                return (
+                  <Pressable
+                    key={cat}
+                    style={[
+                      styles.categoryTab,
+                      isSelected && { backgroundColor: currentTheme.accentColor },
+                    ]}
+                    onPress={() => setSelectedCategory(cat)}
+                  >
+                    <View style={styles.categoryTabContent}>
+                      <IconSymbol name={iconName} size={16} color={iconColor} />
+                      <Text style={[
+                        styles.categoryTabText,
+                        { color: iconColor },
+                      ]}>
+                        {label}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
 
             {/* Theme Grid */}
@@ -305,7 +320,9 @@ export default function FeedScreen() {
                     {themeOption.description}
                   </Text>
                   {themeOption.textShadow && (
-                    <Text style={styles.themeCardBadge}>✨</Text>
+                    <View style={styles.themeCardBadge}>
+                      <IconSymbol name="sparkles" size={14} color={themeOption.accentColor} />
+                    </View>
                   )}
                   {currentTheme.id === themeOption.id && (
                     <View style={[styles.selectedBadge, { backgroundColor: themeOption.accentColor }]}>
@@ -322,9 +339,12 @@ export default function FeedScreen() {
                 style={[styles.resetButton, { borderColor: currentTheme.accentColor }]}
                 onPress={handleResetTheme}
               >
-                <Text style={[styles.resetButtonText, { color: currentTheme.accentColor }]}>
-                  🔄 Reset to Auto-Match
-                </Text>
+                <View style={styles.resetButtonContent}>
+                  <IconSymbol name="arrow.counterclockwise" size={18} color={currentTheme.accentColor} />
+                  <Text style={[styles.resetButtonText, { color: currentTheme.accentColor }]}>
+                    Reset to Auto-Match
+                  </Text>
+                </View>
               </Pressable>
             )}
           </View>
@@ -335,7 +355,7 @@ export default function FeedScreen() {
 }
 
 interface MenuItemProps {
-  icon: string;
+  icon: IconSymbolName;
   label: string;
   onPress: () => void;
   isDark: boolean;
@@ -343,13 +363,21 @@ interface MenuItemProps {
 }
 
 function MenuItem({ icon, label, onPress, isDark, disabled }: MenuItemProps) {
+  const iconColor = disabled 
+    ? '#9CA3AF' 
+    : isDark 
+      ? '#F3F4F6' 
+      : '#1F2937';
+  
   return (
     <Pressable 
       style={[styles.menuItem, disabled && styles.menuItemDisabled]} 
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={styles.menuItemIcon}>{icon}</Text>
+      <View style={styles.menuItemIcon}>
+        <IconSymbol name={icon} size={24} color={iconColor} />
+      </View>
       <Text style={[
         styles.menuItemLabel, 
         isDark && styles.menuItemLabelDark,
@@ -403,8 +431,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   menuItemIcon: {
-    fontSize: 24,
+    width: 24,
+    height: 24,
     marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   menuItemLabel: {
     fontSize: 18,
@@ -492,6 +523,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(128, 128, 128, 0.15)',
   },
+  categoryTabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   categoryTabText: {
     fontSize: 14,
     fontWeight: '600',
@@ -527,7 +563,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    fontSize: 14,
   },
   selectedBadge: {
     position: 'absolute',
@@ -551,6 +586,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
+  },
+  resetButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   resetButtonText: {
     fontSize: 16,

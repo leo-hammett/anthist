@@ -10,6 +10,7 @@ import {
     useColorScheme,
     View,
 } from 'react-native';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 import { Content, useFeedStore } from '../../lib/store/feedStore';
 
 type FilterType = 'all' | 'active' | 'hidden';
@@ -172,9 +173,17 @@ export default function ContentListScreen() {
             <Image source={{ uri: item.thumbnail }} style={styles.thumbnailImage} />
           ) : (
             <View style={[styles.thumbnailPlaceholder, isDark && styles.thumbnailPlaceholderDark]}>
-              <Text style={styles.thumbnailEmoji}>
-                {item.type === 'YOUTUBE' ? '🎬' : item.type === 'PDF' ? '📄' : '📝'}
-              </Text>
+              <IconSymbol 
+                name={
+                  item.type === 'YOUTUBE' 
+                    ? 'play.rectangle.fill' 
+                    : item.type === 'PDF' 
+                      ? 'doc.fill' 
+                      : 'doc.text.fill'
+                } 
+                size={24} 
+                color={isDark ? '#888' : '#666'} 
+              />
             </View>
           )}
         </View>
@@ -420,9 +429,6 @@ const styles = StyleSheet.create({
   },
   thumbnailPlaceholderDark: {
     backgroundColor: '#2D2D2D',
-  },
-  thumbnailEmoji: {
-    fontSize: 24,
   },
   itemContent: {
     flex: 1,

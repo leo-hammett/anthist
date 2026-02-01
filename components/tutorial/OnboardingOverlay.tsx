@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Pressable, 
-  useColorScheme,
-  Dimensions,
-  Animated,
+import {
+    Animated,
+    Dimensions,
+    Pressable,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
 } from 'react-native';
 import { useAuthStore } from '../../lib/store/authStore';
+import { IconSymbol } from '../ui/icon-symbol';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -57,10 +58,10 @@ export default function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps)
             <View style={styles.instruction}>
               <View style={styles.gestureDemo}>
                 <View style={[styles.hand, isDark && styles.handDark]}>
-                  <Text style={styles.handEmoji}>👆</Text>
+                  <IconSymbol name="hand.point.up.fill" size={28} color="#3B82F6" />
                 </View>
                 <View style={styles.swipeArrow}>
-                  <Text style={styles.arrowEmoji}>←</Text>
+                  <IconSymbol name="arrow.left" size={28} color="#3B82F6" />
                 </View>
               </View>
               <Text style={[styles.instructionText, isDark && styles.instructionTextDark]}>
@@ -174,16 +175,9 @@ const styles = StyleSheet.create({
   handDark: {
     backgroundColor: '#333',
   },
-  handEmoji: {
-    fontSize: 28,
-  },
   swipeArrow: {
     position: 'absolute',
     left: -10,
-  },
-  arrowEmoji: {
-    fontSize: 32,
-    color: '#3B82F6',
   },
   tapCircle: {
     width: 60,
