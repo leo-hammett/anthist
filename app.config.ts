@@ -1,4 +1,4 @@
-import { ExpoConfig, ConfigContext } from 'expo/config';
+import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -73,9 +73,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: {
       origin: false,
-    },
-    eas: {
-      projectId: 'your-eas-project-id', // Replace with actual EAS project ID
     },
   },
 });

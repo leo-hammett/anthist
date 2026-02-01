@@ -15,8 +15,13 @@ export const storage = defineStorage({
   name: 'feedContentBucket',
   access: (allow) => ({
     // Blog content - Lambda writes via IAM, any authenticated user can read
-    // Content is keyed by contentId (unique), not userId
+    // New pattern: content keyed by contentId (unique)
     'blogs/content/*': [
+      allow.authenticated.to(['read']),
+    ],
+    // Legacy pattern: content keyed by userId (for existing data)
+    // TODO: Migrate old content and remove this rule
+    'blogs/*': [
       allow.authenticated.to(['read']),
     ],
     // PDF uploads - each user can only access their own

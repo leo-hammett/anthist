@@ -5,7 +5,7 @@ import RenderHtml from 'react-native-render-html';
 import { useAuthStore } from '../../lib/store/authStore';
 import { Content, useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
-import { getDefaultTheme, getThemeById } from '../themes';
+import { getAllThemes, getDefaultTheme, getThemeForContent, ReaderTheme } from '../themes';
 
 interface BlogReaderProps {
   content: Content;
@@ -16,9 +16,10 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
+  const isDark = colorScheme === 'dark';
   
   const { user } = useAuthStore();
-  const { reprocessContent, isReprocessing } = useFeedStore();
+  const { reprocessContent, isReprocessing, getThemeOverride } = useFeedStore();
   const isThisReprocessing = isReprocessing === content.id;
   
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
@@ -32,10 +33,23 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   const scrollPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentHeight = useRef<number>(1);
 
-  // Get theme based on content semantic tags
-  const theme = content.semanticTags?.length
-    ? getThemeById(content.semanticTags[0]) ?? getDefaultTheme(colorScheme === 'dark')
-    : getDefaultTheme(colorScheme === 'dark');
+  // Get theme - use store override or smart matching
+  const getActiveTheme = useCallback((): ReaderTheme => {
+    const themeOverride = getThemeOverride(content.id);
+    if (themeOverride) {
+      const overrideTheme = getAllThemes().find(t => t.id === themeOverride);
+      if (overrideTheme) return overrideTheme;
+    }
+    
+    // Use smart matching based on content semantic tags
+    if (content.semanticTags?.length) {
+      return getThemeForContent(content.semanticTags, isDark);
+    }
+    
+    return getDefaultTheme(isDark);
+  }, [content.id, content.semanticTags, isDark, getThemeOverride]);
+
+  const theme = getActiveTheme();
 
   // Load content from S3 or show placeholder
   useEffect(() => {
@@ -184,14 +198,15 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   }
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      style={[styles.container, { backgroundColor: theme.backgroundColor }]}
-      contentContainerStyle={styles.contentContainer}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+      >
       {htmlContent && (
         <RenderHtml
           contentWidth={width - 48}
@@ -285,11 +300,15 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   contentContainer: {

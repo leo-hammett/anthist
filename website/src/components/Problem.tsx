@@ -3,13 +3,13 @@ const problems = [
     icon: '🎯',
     title: 'Algorithms Control You',
     description:
-      'TikTok, YouTube, and Instagram decide what you see based on what keeps you scrolling—not what's actually valuable to you.',
+      "TikTok, YouTube, and Instagram decide what you see based on what keeps you scrolling—not what's actually valuable to you.",
   },
   {
     icon: '⏰',
     title: 'Endless Scrolling',
     description:
-      'Infinite feeds are designed to steal your time. There's no natural stopping point, no sense of completion.',
+      "Infinite feeds are designed to steal your time. There's no natural stopping point, no sense of completion.",
   },
   {
     icon: '🧠',

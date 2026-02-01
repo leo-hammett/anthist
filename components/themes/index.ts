@@ -67,26 +67,112 @@ export function getDefaultTheme(isDark: boolean): ReaderTheme {
 }
 
 /**
- * Get theme matching semantic tags
+ * Get theme matching semantic tags with smart matching
+ * 
+ * Scoring system:
+ * - Exact tag match: 10 points
+ * - Partial match (tag contains keyword): 5 points  
+ * - Related category bonus: 3 points
+ * - Exciting theme bonus: 2 points (themes with special effects)
  */
 export function getThemeForContent(semanticTags: string[], isDark: boolean): ReaderTheme {
-  const filteredThemes = themes.filter(t => 
-    isDark ? t.backgroundColor.startsWith('#0') || t.backgroundColor.startsWith('#1') 
-           : !t.backgroundColor.startsWith('#0') && !t.backgroundColor.startsWith('#1')
-  );
+  // Filter by light/dark mode
+  const filteredThemes = themes.filter(t => {
+    const bg = t.backgroundColor.toLowerCase();
+    // Check luminance - dark themes have low RGB values
+    const hex = bg.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const luminance = (r * 0.299 + g * 0.587 + b * 0.114);
+    return isDark ? luminance < 60 : luminance >= 60;
+  });
   
-  // Find theme with most matching tags
+  if (!semanticTags || semanticTags.length === 0) {
+    return getDefaultTheme(isDark);
+  }
+
+  // Related category mappings for better matches
+  const categoryRelations: Record<string, string[]> = {
+    'tech': ['programming', 'developer', 'coding', 'software', 'engineering', 'ai', 'data'],
+    'programming': ['tech', 'developer', 'coding', 'software', 'engineering'],
+    'cooking': ['food', 'recipes', 'baking', 'kitchen', 'culinary'],
+    'food': ['cooking', 'recipes', 'baking', 'kitchen', 'culinary', 'restaurant'],
+    'health': ['wellness', 'fitness', 'meditation', 'yoga', 'exercise'],
+    'wellness': ['health', 'fitness', 'meditation', 'yoga', 'mindfulness'],
+    'literature': ['books', 'fiction', 'reading', 'writing', 'poetry'],
+    'science': ['research', 'academic', 'education', 'data', 'analysis'],
+    'business': ['finance', 'professional', 'startup', 'entrepreneurship'],
+    'nature': ['environment', 'outdoor', 'garden', 'ecology', 'wildlife'],
+    'gaming': ['esports', 'entertainment', 'tech'],
+    'art': ['creative', 'design', 'photography', 'visual'],
+    'music': ['entertainment', 'creative', 'podcasts'],
+  };
+
+  // Exciting themes get a bonus (themes with special effects)
+  const excitingThemeIds = [
+    'dark-terminal', 'dark-matrix', 'dark-cyberpunk', 'dark-synthwave', 
+    'dark-neon', 'dark-vapor', 'dark-aurora', 'dark-gaming', 'dark-dracula',
+    'dark-monokai', 'dark-nord', 'light-studio', 'light-minimal',
+    'accessibility-high-contrast', 'mood-mysterious', 'mood-energetic',
+    'culture-zen-japanese', 'culture-arabic', 'brand-premium',
+  ];
+
   let bestMatch = filteredThemes[0];
   let bestScore = 0;
   
+  const normalizedContentTags = semanticTags.map(t => t.toLowerCase().trim());
+  
   for (const theme of filteredThemes) {
-    const score = semanticTags.filter(tag => 
-      theme.semanticTags.some(t => t.toLowerCase().includes(tag.toLowerCase()))
-    ).length;
+    let score = 0;
+    const themeTagsLower = theme.semanticTags.map(t => t.toLowerCase());
+    
+    for (const contentTag of normalizedContentTags) {
+      // Exact match - highest priority
+      if (themeTagsLower.includes(contentTag)) {
+        score += 10;
+        continue;
+      }
+      
+      // Partial match - theme tag contains content tag or vice versa
+      for (const themeTag of themeTagsLower) {
+        if (themeTag.includes(contentTag) || contentTag.includes(themeTag)) {
+          score += 5;
+          break;
+        }
+      }
+      
+      // Related category match
+      const relatedTags = categoryRelations[contentTag] || [];
+      for (const relatedTag of relatedTags) {
+        if (themeTagsLower.includes(relatedTag)) {
+          score += 3;
+          break;
+        }
+      }
+    }
+    
+    // Bonus for exciting themes (to make it fun!)
+    if (excitingThemeIds.includes(theme.id) && score > 0) {
+      score += 2;
+    }
+    
+    // Slight bonus for themes with text shadows (more visually interesting)
+    if (theme.textShadow && score > 0) {
+      score += 1;
+    }
     
     if (score > bestScore) {
       bestScore = score;
       bestMatch = theme;
+    }
+  }
+  
+  // If no good match found (score < 3), pick a random exciting theme
+  if (bestScore < 3) {
+    const excitingFiltered = filteredThemes.filter(t => excitingThemeIds.includes(t.id));
+    if (excitingFiltered.length > 0) {
+      return excitingFiltered[Math.floor(Math.random() * excitingFiltered.length)];
     }
   }
   

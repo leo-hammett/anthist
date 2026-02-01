@@ -1,73 +1,115 @@
-# React + TypeScript + Vite
+# Anthist Marketing Website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React-based landing page for Anthist, built with Vite, TypeScript, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Start development server
+npm run dev
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+# Build for production
+npm run build
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+website/
+├── public/
+│   └── favicon.svg
+├── src/
+│   ├── components/
+│   │   ├── Navbar.tsx      # Sticky navigation with glass effect
+│   │   ├── Hero.tsx        # Main hero section with app preview
+│   │   ├── LogoCloud.tsx   # Social proof logos
+│   │   ├── Problem.tsx     # Pain points section
+│   │   ├── HowItWorks.tsx  # 3-step solution
+│   │   ├── Features.tsx    # Feature grid
+│   │   ├── Stats.tsx       # Investor metrics
+│   │   ├── Testimonials.tsx # User testimonials
+│   │   ├── OpenSource.tsx  # Open source CTA
+│   │   ├── CTA.tsx         # Email signup
+│   │   └── Footer.tsx      # Site footer
+│   ├── App.tsx             # Main app component
+│   ├── main.tsx            # Entry point
+│   └── index.css           # Tailwind + custom styles
+├── index.html              # HTML template
+└── vite.config.ts          # Vite configuration
+```
+
+## Deployment
+
+### Vercel / Netlify
+Connect your repository and set the build command to `npm run build` and output directory to `dist`.
+
+### AWS S3 + CloudFront
+```bash
+npm run build
+aws s3 sync dist/ s3://anthist.com
+```
+
+### Docker
+```dockerfile
+FROM node:20-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+## Customization
+
+### Waitlist Form
+The CTA component currently handles form submission client-side. Connect to your preferred form handler:
+
+```tsx
+// In CTA.tsx
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  await fetch('https://your-api.com/waitlist', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  setSubmitted(true);
+};
+```
+
+### Colors
+Edit the gradient and accent colors in `src/index.css`:
+
+```css
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+```
+
+### Fonts
+The site uses Inter (sans) and Fraunces (serif) loaded from Google Fonts. Update in `index.html`.
+
+## License
+
+MIT

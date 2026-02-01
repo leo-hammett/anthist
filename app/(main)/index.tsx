@@ -1,21 +1,44 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, StatusBar, useColorScheme, Modal, Pressable, Text, Platform } from 'react-native';
 import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import SwipeContainer from '../../components/feed/SwipeContainer';
+import { getAllThemes, getDefaultTheme, getThemeForContent, getThemesByCategory, ReaderTheme } from '../../components/themes';
+import OnboardingOverlay from '../../components/tutorial/OnboardingOverlay';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
-import SwipeContainer from '../../components/feed/SwipeContainer';
-import OnboardingOverlay from '../../components/tutorial/OnboardingOverlay';
 
 export default function FeedScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
   const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { fetchContents, isLoading: feedLoading, getCurrentContent } = useFeedStore();
+  const { fetchContents, isLoading: feedLoading, getCurrentContent, setThemeOverride, getThemeOverride } = useFeedStore();
   
   const [showTutorial, setShowTutorial] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<'dark' | 'light' | 'specialty'>(isDark ? 'dark' : 'light');
+  
+  // Get current theme for the current content
+  const getCurrentTheme = useCallback((): ReaderTheme => {
+    const current = getCurrentContent();
+    if (!current) return getDefaultTheme(isDark);
+    
+    const override = getThemeOverride(current.id);
+    if (override) {
+      const theme = getAllThemes().find(t => t.id === override);
+      if (theme) return theme;
+    }
+    
+    if (current.semanticTags?.length) {
+      return getThemeForContent(current.semanticTags, isDark);
+    }
+    
+    return getDefaultTheme(isDark);
+  }, [getCurrentContent, getThemeOverride, isDark]);
+  
+  const currentTheme = getCurrentTheme();
 
   // Initialize feed and telemetry
   useEffect(() => {
@@ -107,6 +130,28 @@ export default function FeedScreen() {
     }
   };
 
+  const handleOpenThemeSelector = () => {
+    setShowMenu(false);
+    setSelectedCategory(isDark ? 'dark' : 'light');
+    setShowThemeSelector(true);
+  };
+
+  const handleSelectTheme = (themeId: string) => {
+    const current = getCurrentContent();
+    if (current) {
+      setThemeOverride(current.id, themeId);
+    }
+    setShowThemeSelector(false);
+  };
+
+  const handleResetTheme = () => {
+    const current = getCurrentContent();
+    if (current) {
+      setThemeOverride(current.id, null);
+    }
+    setShowThemeSelector(false);
+  };
+
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
       <StatusBar 
@@ -161,6 +206,13 @@ export default function FeedScreen() {
               isDark={isDark}
               disabled={!getCurrentContent()}
             />
+            <MenuItem 
+              icon="🎨" 
+              label="Change Theme" 
+              onPress={handleOpenThemeSelector}
+              isDark={isDark}
+              disabled={!getCurrentContent()}
+            />
             
             <View style={styles.menuDivider} />
             
@@ -172,6 +224,109 @@ export default function FeedScreen() {
                 Cancel
               </Text>
             </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Theme Selector Modal */}
+      <Modal
+        visible={showThemeSelector}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowThemeSelector(false)}
+      >
+        <Pressable 
+          style={styles.themeSelectorBackdrop} 
+          onPress={() => setShowThemeSelector(false)}
+        >
+          <View 
+            style={[styles.themeSelectorContainer, isDark && styles.themeSelectorContainerDark]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.themeSelectorHeader}>
+              <View style={styles.themeSelectorHandle} />
+              <Text style={[styles.themeSelectorTitle, isDark && styles.themeSelectorTitleDark]}>
+                Choose Theme
+              </Text>
+              <Text style={[styles.themeSelectorSubtitle, isDark && styles.themeSelectorSubtitleDark]}>
+                Current: {currentTheme.name}
+              </Text>
+            </View>
+
+            {/* Category Tabs */}
+            <View style={styles.categoryTabs}>
+              {(['dark', 'light', 'specialty'] as const).map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[
+                    styles.categoryTab,
+                    selectedCategory === cat && { backgroundColor: currentTheme.accentColor },
+                  ]}
+                  onPress={() => setSelectedCategory(cat)}
+                >
+                  <Text style={[
+                    styles.categoryTabText,
+                    { color: selectedCategory === cat ? '#FFFFFF' : (isDark ? '#AAAAAA' : '#666666') },
+                  ]}>
+                    {cat === 'specialty' ? '✨ Special' : cat === 'dark' ? '🌙 Dark' : '☀️ Light'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Theme Grid */}
+            <FlatList
+              data={getThemesByCategory(selectedCategory)}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              contentContainerStyle={styles.themeGrid}
+              renderItem={({ item: themeOption }) => (
+                <Pressable
+                  style={[
+                    styles.themeCard,
+                    { backgroundColor: themeOption.backgroundColor },
+                    currentTheme.id === themeOption.id && styles.themeCardSelected,
+                  ]}
+                  onPress={() => handleSelectTheme(themeOption.id)}
+                >
+                  <Text style={[styles.themeCardName, { color: themeOption.textColor }]}>
+                    {themeOption.name}
+                  </Text>
+                  <Text 
+                    style={[
+                      styles.themeCardPreview, 
+                      { 
+                        color: themeOption.textColor,
+                        fontFamily: themeOption.fontFamily,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {themeOption.description}
+                  </Text>
+                  {themeOption.textShadow && (
+                    <Text style={styles.themeCardBadge}>✨</Text>
+                  )}
+                  {currentTheme.id === themeOption.id && (
+                    <View style={[styles.selectedBadge, { backgroundColor: themeOption.accentColor }]}>
+                      <Text style={styles.selectedBadgeText}>✓</Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
+            />
+
+            {/* Reset to Auto Button */}
+            {getThemeOverride(getCurrentContent()?.id ?? '') && (
+              <Pressable
+                style={[styles.resetButton, { borderColor: currentTheme.accentColor }]}
+                onPress={handleResetTheme}
+              >
+                <Text style={[styles.resetButtonText, { color: currentTheme.accentColor }]}>
+                  🔄 Reset to Auto-Match
+                </Text>
+              </Pressable>
+            )}
           </View>
         </Pressable>
       </Modal>
@@ -278,5 +433,127 @@ const styles = StyleSheet.create({
   },
   menuCancelTextDark: {
     color: '#9CA3AF',
+  },
+  // Theme Selector Styles
+  themeSelectorBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  themeSelectorContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    paddingBottom: 34,
+  },
+  themeSelectorContainerDark: {
+    backgroundColor: '#1A1A1A',
+  },
+  themeSelectorHeader: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  themeSelectorHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#888888',
+    borderRadius: 2,
+    marginBottom: 16,
+  },
+  themeSelectorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  themeSelectorTitleDark: {
+    color: '#FFFFFF',
+  },
+  themeSelectorSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  themeSelectorSubtitleDark: {
+    color: '#888888',
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 8,
+  },
+  categoryTab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(128, 128, 128, 0.15)',
+  },
+  categoryTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  themeGrid: {
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+  },
+  themeCard: {
+    flex: 1,
+    margin: 6,
+    padding: 16,
+    borderRadius: 16,
+    minHeight: 100,
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  themeCardSelected: {
+    borderColor: '#FFD700',
+  },
+  themeCardName: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  themeCardPreview: {
+    fontSize: 12,
+    opacity: 0.8,
+    lineHeight: 16,
+  },
+  themeCardBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    fontSize: 14,
+  },
+  selectedBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  resetButton: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

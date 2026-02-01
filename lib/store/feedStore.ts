@@ -70,6 +70,9 @@ interface FeedState {
 
   // Navigation history (for back swipe)
   viewHistory: string[];
+  
+  // Theme preferences (contentId -> themeId)
+  themeOverrides: Record<string, string>;
 
   // Actions
   fetchContents: (userId: string) => Promise<void>;
@@ -86,10 +89,15 @@ interface FeedState {
   goToNext: () => void;
   goToPrevious: () => void;
   goToIndex: (index: number) => void;
+  goToContentById: (id: string) => boolean;
   
   // Current content helpers
   getCurrentContent: () => Content | null;
   getContentById: (id: string) => Content | null;
+  
+  // Theme
+  setThemeOverride: (contentId: string, themeId: string | null) => void;
+  getThemeOverride: (contentId: string) => string | null;
   
   // Clear
   clearError: () => void;
@@ -104,6 +112,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   isReprocessing: null,
   error: null,
   viewHistory: [],
+  themeOverrides: {},
 
   fetchContents: async (userId: string) => {
     try {
@@ -410,6 +419,16 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
+  goToContentById: (id: string) => {
+    const { rankedContentIds } = get();
+    const index = rankedContentIds.indexOf(id);
+    if (index !== -1) {
+      set({ currentIndex: index });
+      return true;
+    }
+    return false;
+  },
+
   getCurrentContent: () => {
     const { contents, rankedContentIds, currentIndex } = get();
     const contentId = rankedContentIds[currentIndex];
@@ -418,6 +437,22 @@ export const useFeedStore = create<FeedState>((set, get) => ({
 
   getContentById: (id: string) => {
     return get().contents.find((c) => c.id === id) ?? null;
+  },
+
+  setThemeOverride: (contentId: string, themeId: string | null) => {
+    set((state) => {
+      const newOverrides = { ...state.themeOverrides };
+      if (themeId === null) {
+        delete newOverrides[contentId];
+      } else {
+        newOverrides[contentId] = themeId;
+      }
+      return { themeOverrides: newOverrides };
+    });
+  },
+
+  getThemeOverride: (contentId: string) => {
+    return get().themeOverrides[contentId] ?? null;
   },
 
   clearError: () => set({ error: null }),
@@ -430,5 +465,6 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     isReprocessing: null,
     error: null,
     viewHistory: [],
+    themeOverrides: {},
   }),
 }));

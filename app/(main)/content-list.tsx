@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  useColorScheme,
-  Alert,
-  Image,
-} from 'react-native';
 import { router } from 'expo-router';
-import { useFeedStore, Content, ContentStatus } from '../../lib/store/feedStore';
+import React, { useMemo, useState } from 'react';
+import {
+    Alert,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
+} from 'react-native';
+import { Content, useFeedStore } from '../../lib/store/feedStore';
 
 type FilterType = 'all' | 'active' | 'hidden';
 
@@ -18,7 +18,7 @@ export default function ContentListScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
-  const { contents, hideContent, unhideContent, deleteContent } = useFeedStore();
+  const { contents, hideContent, unhideContent, deleteContent, goToContentById } = useFeedStore();
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
@@ -37,7 +37,7 @@ export default function ContentListScreen() {
     setSelectedIds(new Set([id]));
   };
 
-  const handlePress = (id: string) => {
+  const handlePress = (id: string, item: Content) => {
     if (isSelecting) {
       const newSelected = new Set(selectedIds);
       if (newSelected.has(id)) {
@@ -49,6 +49,39 @@ export default function ContentListScreen() {
       if (newSelected.size === 0) {
         setIsSelecting(false);
       }
+    } else {
+      // Jump to this content in the feed
+      handleJumpToContent(item);
+    }
+  };
+
+  const handleJumpToContent = (item: Content) => {
+    // Only active content can be jumped to in the feed
+    if (item.status !== 'ACTIVE') {
+      Alert.alert(
+        'Content Hidden',
+        'This content is hidden. Would you like to unhide it and view it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unhide & View',
+            onPress: async () => {
+              await unhideContent(item.id);
+              // Small delay to let state update
+              setTimeout(() => {
+                goToContentById(item.id);
+                router.back();
+              }, 100);
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    const success = goToContentById(item.id);
+    if (success) {
+      router.back();
     }
   };
 
@@ -130,7 +163,7 @@ export default function ContentListScreen() {
           isSelected && styles.itemSelected,
           isHidden && styles.itemHidden,
         ]}
-        onPress={() => handlePress(item.id)}
+        onPress={() => handlePress(item.id, item)}
         onLongPress={() => handleLongPress(item.id)}
       >
         {/* Thumbnail */}
@@ -169,11 +202,13 @@ export default function ContentListScreen() {
           </View>
         </View>
 
-        {/* Selection indicator */}
-        {isSelecting && (
+        {/* Selection indicator or chevron */}
+        {isSelecting ? (
           <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
             {isSelected && <Text style={styles.checkmark}>✓</Text>}
           </View>
+        ) : (
+          <Text style={[styles.chevron, isDark && styles.chevronDark]}>›</Text>
         )}
       </Pressable>
     );
@@ -184,20 +219,36 @@ export default function ContentListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, isDark && styles.titleDark]}>My Content</Text>
-        {isSelecting ? (
-          <Pressable onPress={cancelSelection} style={styles.headerButton}>
-            <Text style={[styles.headerButtonText, isDark && styles.headerButtonTextDark]}>
-              Cancel
-            </Text>
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => router.back()} style={styles.headerButton}>
-            <Text style={[styles.headerButtonText, isDark && styles.headerButtonTextDark]}>
-              Done
-            </Text>
-          </Pressable>
-        )}
+        <View style={styles.headerButtons}>
+          {isSelecting ? (
+            <Pressable onPress={cancelSelection} style={styles.headerButton}>
+              <Text style={[styles.headerButtonText, isDark && styles.headerButtonTextDark]}>
+                Cancel
+              </Text>
+            </Pressable>
+          ) : (
+            <>
+              <Pressable onPress={() => setIsSelecting(true)} style={styles.headerButton}>
+                <Text style={[styles.headerButtonText, isDark && styles.headerButtonTextDark]}>
+                  Select
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => router.back()} style={styles.headerButton}>
+                <Text style={[styles.headerButtonText, isDark && styles.headerButtonTextDark]}>
+                  Done
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </View>
       </View>
+
+      {/* Help text */}
+      {!isSelecting && filteredContents.length > 0 && (
+        <Text style={[styles.helpText, isDark && styles.helpTextDark]}>
+          Tap to jump to content
+        </Text>
+      )}
 
       {/* Filter tabs */}
       <View style={styles.filterContainer}>
@@ -267,7 +318,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  helpText: {
+    fontSize: 13,
+    color: '#6B7280',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  helpTextDark: {
+    color: '#9CA3AF',
   },
   title: {
     fontSize: 28,
@@ -461,5 +525,14 @@ const styles = StyleSheet.create({
   },
   actionButtonTextDanger: {
     color: '#DC2626',
+  },
+  chevron: {
+    fontSize: 24,
+    color: '#9CA3AF',
+    marginLeft: 8,
+    fontWeight: '300',
+  },
+  chevronDark: {
+    color: '#6B7280',
   },
 });
