@@ -1,8 +1,5 @@
-import { generateClient } from 'aws-amplify/data';
 import { create } from 'zustand';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { amplifyClient } from '../amplify-client';
 
 export type ContentType = 'BLOG' | 'YOUTUBE' | 'PDF' | 'PLAYLIST_VIDEO';
 export type ContentStatus = 'ACTIVE' | 'HIDDEN' | 'DELETED';
@@ -118,7 +115,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const { data: contents, errors } = await client.models.Content.list({
+      const { data: contents, errors } = await amplifyClient.models.Content.list({
         filter: {
           userId: { eq: userId },
           status: { eq: 'ACTIVE' },
@@ -175,7 +172,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   fetchRankings: async (userId: string) => {
     try {
       // Try to get cached rankings
-      const { data: ranking } = await client.models.ContentRanking.get({
+      const { data: ranking } = await amplifyClient.models.ContentRanking.get({
         userId,
         playlistId: '', // Default playlist
       });
@@ -194,7 +191,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const { data: newContent, errors } = await client.models.Content.create({
+      const { data: newContent, errors } = await amplifyClient.models.Content.create({
         ...contentData,
         viewCount: 0,
         completionRate: 0,
@@ -258,7 +255,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       console.log('Processing content:', input);
       
       // Call the processContent mutation which invokes the Lambda
-      const { data, errors } = await client.mutations.processContent({
+      const { data, errors } = await amplifyClient.mutations.processContent({
         contentId: input.contentId,
         url: input.url,
         type: input.type,
@@ -295,7 +292,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       console.log('Reprocessing content:', contentId);
 
       // Call the processContent mutation
-      const { data, errors } = await client.mutations.processContent({
+      const { data, errors } = await amplifyClient.mutations.processContent({
         contentId: content.id,
         url: content.url,
         type: content.type,
@@ -339,7 +336,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
 
   updateContent: async (id: string, updates: Partial<Content>) => {
     try {
-      const { errors } = await client.models.Content.update({
+      const { errors } = await amplifyClient.models.Content.update({
         id,
         ...updates,
       });
@@ -376,7 +373,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
 
   deleteContent: async (id: string) => {
     try {
-      const { errors } = await client.models.Content.delete({ id });
+      const { errors } = await amplifyClient.models.Content.delete({ id });
 
       if (errors) {
         throw new Error(errors[0].message);

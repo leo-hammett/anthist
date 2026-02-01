@@ -1,4 +1,4 @@
-import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { fetchUserAttributes, getCurrentUser, signOut } from 'aws-amplify/auth';
 import { create } from 'zustand';
 import { amplifyClient } from '../amplify-client';
 
@@ -49,7 +49,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       const cognitoUser = await getCurrentUser();
-      const attributes = await fetchUserAttributes();
       
       // Try to fetch existing user profile
       const { data: existingUser } = await amplifyClient.models.User.get({

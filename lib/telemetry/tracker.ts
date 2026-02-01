@@ -1,7 +1,4 @@
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { amplifyClient } from '../amplify-client';
 
 export interface EngagementData {
   timeSpent: number;
@@ -180,7 +177,7 @@ class TelemetryTracker {
     const day = new Date().getDay();
 
     try {
-      await client.models.Engagement.create({
+      await amplifyClient.models.Engagement.create({
         userId: this.userId,
         contentId: this.activeSession.contentId,
         sessionId: this.activeSession.sessionId,
