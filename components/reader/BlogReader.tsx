@@ -1,0 +1,329 @@
+import { downloadData } from 'aws-amplify/storage';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import RenderHtml from 'react-native-render-html';
+import { useAuthStore } from '../../lib/store/authStore';
+import { Content, useFeedStore } from '../../lib/store/feedStore';
+import { telemetryTracker } from '../../lib/telemetry/tracker';
+import { getDefaultTheme, getThemeById } from '../themes';
+
+interface BlogReaderProps {
+  content: Content;
+  isActive: boolean;
+}
+
+export default function BlogReader({ content, isActive }: BlogReaderProps) {
+  const { width } = useWindowDimensions();
+  const colorScheme = useColorScheme();
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const { user } = useAuthStore();
+  const { reprocessContent, isReprocessing } = useFeedStore();
+  const isThisReprocessing = isReprocessing === content.id;
+  
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [needsReprocessing, setNeedsReprocessing] = useState(false);
+
+  // Scroll tracking
+  const scrollStartTime = useRef<number>(0);
+  const lastScrollY = useRef<number>(0);
+  const scrollPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentHeight = useRef<number>(1);
+
+  // Get theme based on content semantic tags
+  const theme = content.semanticTags?.length
+    ? getThemeById(content.semanticTags[0]) ?? getDefaultTheme(colorScheme === 'dark')
+    : getDefaultTheme(colorScheme === 'dark');
+
+  // Load content from S3 or show placeholder
+  useEffect(() => {
+    async function loadContent() {
+      setIsLoading(true);
+      setError(null);
+      setNeedsReprocessing(false);
+
+      try {
+        if (content.s3Key) {
+          // Fetch from S3 using Amplify Storage
+          try {
+            const result = await downloadData({ 
+              path: content.s3Key,
+            }).result;
+            const text = await result.body.text();
+            setHtmlContent(text);
+          } catch (s3Error) {
+            console.warn('S3 fetch failed, needs reprocessing:', s3Error);
+            // Content exists in DB but S3 failed - needs reprocessing
+            setHtmlContent(createPlaceholderHtml(content, 'Content needs to be re-extracted.'));
+            setNeedsReprocessing(true);
+          }
+        } else {
+          // No stored content yet - needs processing
+          const isStillProcessing = content.title === 'Processing...';
+          if (isStillProcessing) {
+            setHtmlContent(createPlaceholderHtml(content, 'Processing failed. Tap to retry.'));
+          } else {
+            setHtmlContent(createPlaceholderHtml(content, 'Content not extracted yet.'));
+          }
+          setNeedsReprocessing(true);
+        }
+      } catch (err) {
+        setError('Failed to load content');
+        console.error('Error loading blog content:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadContent();
+  }, [content.id, content.s3Key, content.title]);
+
+  // Handle reprocessing
+  const handleReprocess = useCallback(async () => {
+    if (!user || isThisReprocessing) return;
+    
+    const success = await reprocessContent(content.id, user.cognitoId);
+    if (success) {
+      // Content will be updated in store, trigger re-render
+      setNeedsReprocessing(false);
+    }
+  }, [content.id, user, reprocessContent, isThisReprocessing]);
+
+  // Create placeholder HTML when content isn't available
+  function createPlaceholderHtml(content: Content, message: string): string {
+    const readingTime = content.wordCount 
+      ? `${Math.ceil(content.wordCount / 200)} min read` 
+      : '';
+    
+    return `
+      <article>
+        <h1>${escapeHtml(content.title)}</h1>
+        ${content.author ? `<p class="byline">By ${escapeHtml(content.author)}</p>` : ''}
+        ${readingTime ? `<p class="reading-time">${readingTime}</p>` : ''}
+        ${content.description ? `<p class="excerpt">${escapeHtml(content.description)}</p>` : ''}
+        <hr />
+        <p><em>${message}</em></p>
+        <p><a href="${content.url}">Read on original site</a></p>
+      </article>
+    `;
+  }
+
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Resume scroll position
+  useEffect(() => {
+    if (isActive && content.scrollPosition > 0 && scrollViewRef.current) {
+      const targetY = content.scrollPosition * contentHeight.current;
+      scrollViewRef.current.scrollTo({ y: targetY, animated: false });
+    }
+  }, [isActive, content.scrollPosition]);
+
+  // Handle scroll events for telemetry
+  const handleScroll = useCallback((event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const currentY = contentOffset.y;
+    const maxScroll = contentSize.height - layoutMeasurement.height;
+    
+    contentHeight.current = contentSize.height;
+
+    // Calculate scroll depth (0-1)
+    const scrollDepth = maxScroll > 0 ? Math.min(1, currentY / maxScroll) : 0;
+
+    // Calculate scroll speed
+    const now = Date.now();
+    const timeDelta = now - scrollStartTime.current;
+    const scrollDelta = Math.abs(currentY - lastScrollY.current);
+    const scrollSpeed = timeDelta > 0 ? scrollDelta / timeDelta : 0;
+
+    scrollStartTime.current = now;
+    lastScrollY.current = currentY;
+
+    // Update telemetry
+    telemetryTracker.updateScrollMetrics(scrollDepth, scrollSpeed);
+
+    // Detect scroll pauses (reading indicator)
+    if (scrollPauseTimeout.current) {
+      clearTimeout(scrollPauseTimeout.current);
+    }
+    scrollPauseTimeout.current = setTimeout(() => {
+      telemetryTracker.recordScrollPause();
+    }, 1500); // 1.5s pause = reading
+  }, []);
+
+  // Cleanup pause timeout
+  useEffect(() => {
+    return () => {
+      if (scrollPauseTimeout.current) {
+        clearTimeout(scrollPauseTimeout.current);
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        <ActivityIndicator size="large" color={theme.textColor} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        <Text style={[styles.errorText, { color: theme.textColor }]}>{error}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      ref={scrollViewRef}
+      style={[styles.container, { backgroundColor: theme.backgroundColor }]}
+      contentContainerStyle={styles.contentContainer}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+    >
+      {htmlContent && (
+        <RenderHtml
+          contentWidth={width - 48}
+          source={{ html: htmlContent }}
+          baseStyle={{
+            color: theme.textColor,
+            fontFamily: theme.fontFamily,
+            fontSize: theme.fontSize,
+            lineHeight: theme.lineHeight,
+          }}
+          tagsStyles={{
+            h1: {
+              fontSize: theme.fontSize * 1.8,
+              fontWeight: '700',
+              marginBottom: 16,
+              color: theme.headingColor ?? theme.textColor,
+            },
+            h2: {
+              fontSize: theme.fontSize * 1.4,
+              fontWeight: '600',
+              marginTop: 24,
+              marginBottom: 12,
+              color: theme.headingColor ?? theme.textColor,
+            },
+            h3: {
+              fontSize: theme.fontSize * 1.2,
+              fontWeight: '600',
+              marginTop: 20,
+              marginBottom: 10,
+              color: theme.headingColor ?? theme.textColor,
+            },
+            p: {
+              marginBottom: 16,
+            },
+            a: {
+              color: theme.linkColor,
+              textDecorationLine: 'underline',
+            },
+            blockquote: {
+              borderLeftWidth: 4,
+              borderLeftColor: theme.accentColor,
+              paddingLeft: 16,
+              marginVertical: 16,
+              fontStyle: 'italic',
+              opacity: 0.9,
+            },
+            code: {
+              fontFamily: 'monospace',
+              backgroundColor: theme.codeBackgroundColor ?? 'rgba(0,0,0,0.1)',
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 4,
+              fontSize: theme.fontSize * 0.9,
+            },
+            pre: {
+              backgroundColor: theme.codeBackgroundColor ?? 'rgba(0,0,0,0.1)',
+              padding: 16,
+              borderRadius: 8,
+              overflow: 'hidden',
+            },
+            img: {
+              maxWidth: '100%',
+              borderRadius: 8,
+              marginVertical: 16,
+            },
+          }}
+        />
+      )}
+      
+      {/* Reprocess button for failed/unprocessed content */}
+      {needsReprocessing && (
+        <View style={styles.reprocessContainer}>
+          <Pressable 
+            style={[
+              styles.reprocessButton, 
+              { backgroundColor: theme.accentColor },
+              isThisReprocessing && styles.reprocessButtonDisabled,
+            ]}
+            onPress={handleReprocess}
+            disabled={isThisReprocessing}
+          >
+            {isThisReprocessing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.reprocessButtonText}>Extract Content</Text>
+            )}
+          </Pressable>
+          <Text style={[styles.reprocessHint, { color: theme.textColor, opacity: 0.6 }]}>
+            {isThisReprocessing ? 'Extracting article...' : 'Tap to extract the full article'}
+          </Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 24,
+    paddingTop: 60, // Account for status bar
+    paddingBottom: 100,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+  reprocessContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingVertical: 16,
+  },
+  reprocessButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    minWidth: 180,
+    alignItems: 'center',
+  },
+  reprocessButtonDisabled: {
+    opacity: 0.7,
+  },
+  reprocessButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  reprocessHint: {
+    fontSize: 14,
+    marginTop: 12,
+  },
+});
