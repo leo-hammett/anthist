@@ -1,9 +1,10 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, useColorScheme, ScrollView, Dimensions } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
+import { extractYouTubeVideoId } from '../../lib/content/extractor';
 import { Content } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
-import { extractYouTubeVideoId } from '../../lib/content/extractor';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIDEO_HEIGHT = (SCREEN_WIDTH * 9) / 16; // 16:9 aspect ratio
@@ -16,6 +17,7 @@ interface YouTubePlayerProps {
 export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const playerRef = useRef<YoutubeIframeRef>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -87,7 +89,7 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
   return (
     <ScrollView 
       style={[styles.container, isDark && styles.containerDark]}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top, paddingBottom: insets.bottom + 40 }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Video Player */}
@@ -159,8 +161,6 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
         </View>
       )}
 
-      {/* Spacer for comfortable scrolling */}
-      <View style={{ height: 100 }} />
     </ScrollView>
   );
 }
@@ -179,9 +179,7 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: '#0A0A0A',
   },
-  scrollContent: {
-    paddingBottom: 40,
-  },
+  scrollContent: {},
   playerContainer: {
     width: SCREEN_WIDTH,
     height: VIDEO_HEIGHT,

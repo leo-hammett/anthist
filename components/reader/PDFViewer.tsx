@@ -1,6 +1,7 @@
 import { getUrl } from 'aws-amplify/storage';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Content } from '../../lib/store/feedStore';
 import { IconSymbol } from '../ui/icon-symbol';
@@ -15,6 +16,7 @@ interface PDFViewerProps {
 export default function PDFViewer({ content, isActive }: PDFViewerProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
       {/* Title bar */}
-      <View style={[styles.titleBar, isDark && styles.titleBarDark]}>
+      <View style={[styles.titleBar, isDark && styles.titleBarDark, { paddingTop: insets.top + 8 }]}>
         <Text style={[styles.pdfTitle, isDark && styles.pdfTitleDark]} numberOfLines={1}>
           {content.title}
         </Text>
@@ -161,7 +163,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 50, // Account for status bar
     backgroundColor: '#F5F5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',

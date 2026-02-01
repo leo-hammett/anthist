@@ -2,6 +2,7 @@ import { downloadData } from 'aws-amplify/storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 import RenderHtml from 'react-native-render-html';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../lib/store/authStore';
 import { Content, useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
@@ -15,6 +16,7 @@ interface BlogReaderProps {
 export default function BlogReader({ content, isActive }: BlogReaderProps) {
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const isDark = colorScheme === 'dark';
   
@@ -202,7 +204,10 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 60 },
+        ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -312,9 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 24,
-    paddingTop: 60, // Account for status bar
-    paddingBottom: 100,
+    paddingHorizontal: 24,
   },
   errorText: {
     fontSize: 16,

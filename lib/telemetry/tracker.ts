@@ -171,43 +171,51 @@ class TelemetryTracker {
       this.updateTimeout = null;
     }
 
+    // Capture all session data BEFORE any async operations to avoid race conditions
+    // (startSession may be called during the await, which would clear activeSession)
+    const session = this.activeSession;
+    const userId = this.userId;
     const now = Date.now();
-    const timeSpent = now - this.activeSession.startTime;
+    const timeSpent = now - session.startTime;
     const hour = new Date().getHours();
     const day = new Date().getDay();
+    
+    // Capture engagement data
+    const engagementData = {
+      userId,
+      contentId: session.contentId,
+      sessionId: session.sessionId,
+      timeSpent,
+      timeOfDay: hour,
+      dayOfWeek: day,
+      scrollDepth: session.data.scrollDepth,
+      scrollSpeed: session.data.scrollSpeed,
+      scrollPauses: session.data.scrollPauses,
+      videoPauses: session.data.videoPauses,
+      videoSeeks: session.data.videoSeeks,
+      videoCompletionRate: session.data.videoCompletionRate,
+      touchCount: session.data.touchCount,
+      gyroVariance: session.data.gyroVariance,
+      focusLost: session.data.focusLost,
+      swipeDirection,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Clear session state immediately to prevent duplicate endSession calls
+    this.activeSession = null;
+    this.gyroReadings = [];
 
     try {
-      await amplifyClient.models.Engagement.create({
-        userId: this.userId,
-        contentId: this.activeSession.contentId,
-        sessionId: this.activeSession.sessionId,
-        timeSpent,
-        timeOfDay: hour,
-        dayOfWeek: day,
-        scrollDepth: this.activeSession.data.scrollDepth,
-        scrollSpeed: this.activeSession.data.scrollSpeed,
-        scrollPauses: this.activeSession.data.scrollPauses,
-        videoPauses: this.activeSession.data.videoPauses,
-        videoSeeks: this.activeSession.data.videoSeeks,
-        videoCompletionRate: this.activeSession.data.videoCompletionRate,
-        touchCount: this.activeSession.data.touchCount,
-        gyroVariance: this.activeSession.data.gyroVariance,
-        focusLost: this.activeSession.data.focusLost,
-        swipeDirection,
-        timestamp: new Date().toISOString(),
-      });
+      await amplifyClient.models.Engagement.create(engagementData);
 
       console.log('[Telemetry] Session ended:', {
-        contentId: this.activeSession.contentId,
+        contentId: engagementData.contentId,
         timeSpent,
         swipeDirection,
       });
     } catch (error) {
       console.error('[Telemetry] Failed to save engagement:', error);
     }
-
-    this.activeSession = null;
-    this.gyroReadings = [];
   }
 
   getCurrentSessionData(): EngagementData | null {

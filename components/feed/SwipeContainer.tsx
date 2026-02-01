@@ -65,16 +65,10 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
     telemetryTracker.recordTouch();
   }, [onDoubleTap]);
 
-  // Show empty state if no content
-  if (orderedContent.length === 0) {
-    return <EmptyFeed onDoubleTap={onDoubleTap} />;
-  }
-
   // Custom animation: fullscreen at rest, subtle scale during swipe
+  // NOTE: Must be defined before early return to maintain hooks order
   const customAnimation = useCallback((value: number) => {
     'worklet';
-    // value: -1 = previous card, 0 = current card, 1 = next card
-    // Only apply subtle scale during active swiping
     const scale = interpolate(
       value,
       [-1, 0, 1],
@@ -99,6 +93,11 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
       opacity,
     };
   }, []);
+
+  // Show empty state if no content
+  if (orderedContent.length === 0) {
+    return <EmptyFeed onDoubleTap={onDoubleTap} />;
+  }
 
   return (
     <View style={styles.container}>

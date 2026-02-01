@@ -123,6 +123,7 @@ async function processBlog(url: string, contentId: string, userId: string): Prom
   }
 
   const html = await response.text();
+  console.log('Fetched HTML length:', html.length, 'chars for URL:', url);
 
   // Parse HTML with linkedom (lightweight, bundles well with esbuild)
   const { document } = parseHTML(html);
@@ -138,13 +139,72 @@ async function processBlog(url: string, contentId: string, userId: string): Prom
   const metaPublished = document.querySelector('meta[property="article:published_time"]')?.getAttribute('content') ||
                         document.querySelector('time[datetime]')?.getAttribute('datetime');
 
+  console.log('Extracted metadata:', { metaTitle, metaDescription: metaDescription?.substring(0, 100), metaAuthor, hasThumbnail: !!metaThumbnail });
+
   // Use Readability to extract clean article content
   const reader = new Readability(document);
   const article = reader.parse();
 
   if (!article) {
-    // Readability failed, fallback to basic extraction
+    // Readability failed - try fallback extraction from main content areas
     console.warn('Readability extraction failed for:', url);
+    console.log('Attempting fallback content extraction...');
+    
+    // Try to extract content from common content containers
+    const fallbackContent = extractFallbackContent(document);
+    
+    if (fallbackContent) {
+      const wordCount = fallbackContent.text.split(/\s+/).length;
+      const readingTimeMinutes = Math.ceil(wordCount / 200);
+      
+      console.log('Fallback extraction succeeded:', { wordCount, hasHtml: !!fallbackContent.html });
+      
+      // Upload fallback content to S3 if available
+      let s3Key: string | null = null;
+      const extractedHtml = wrapContentInHtml(metaTitle ?? 'Untitled', fallbackContent.html, {
+        author: metaAuthor ?? undefined,
+        excerpt: metaDescription ?? undefined,
+      });
+      
+      if (BUCKET_NAME && extractedHtml) {
+        s3Key = `blogs/content/${contentId}.html`;
+        
+        try {
+          await s3Client.send(new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: s3Key,
+            Body: extractedHtml,
+            ContentType: 'text/html; charset=utf-8',
+            Metadata: {
+              title: metaTitle ?? '',
+              url: url,
+              wordCount: wordCount.toString(),
+              extractionMethod: 'fallback',
+            },
+          }));
+          console.log('Uploaded fallback content to S3:', s3Key);
+        } catch (error) {
+          console.error('Failed to upload fallback to S3:', error);
+          s3Key = null;
+        }
+      }
+      
+      return {
+        title: metaTitle ?? url,
+        description: metaDescription ?? null,
+        author: metaAuthor ?? null,
+        thumbnail: metaThumbnail ?? null,
+        publishedAt: metaPublished ?? null,
+        wordCount,
+        readingTimeMinutes,
+        semanticTags: generateSemanticTags(metaTitle ?? '', 'article'),
+        s3Key,
+        extractedHtml: s3Key ? null : extractedHtml,
+      };
+    }
+    
+    // Complete fallback failure
+    console.warn('All extraction methods failed for:', url);
     return {
       title: metaTitle ?? url,
       description: metaDescription ?? null,
@@ -158,6 +218,8 @@ async function processBlog(url: string, contentId: string, userId: string): Prom
       extractedHtml: null,
     };
   }
+  
+  console.log('Readability extraction succeeded:', { title: article.title, contentLength: article.content?.length });
 
   // Calculate reading metrics
   const wordCount = article.textContent?.split(/\s+/).length ?? 0;
@@ -256,6 +318,77 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Fallback content extraction when Readability fails
+ * Tries common content container selectors
+ */
+function extractFallbackContent(document: any): { html: string; text: string } | null {
+  // Common content container selectors (in order of preference)
+  const contentSelectors = [
+    'article',
+    '[role="article"]',
+    'main',
+    '[role="main"]',
+    '.post-content',
+    '.article-content',
+    '.entry-content',
+    '.content',
+    '.post-body',
+    '.article-body',
+    '.prose',
+    '.markdown-body',
+    '#content',
+    '#main-content',
+    '.main-content',
+  ];
+  
+  for (const selector of contentSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      // Remove script, style, nav, header, footer elements
+      const clone = element.cloneNode(true);
+      const elementsToRemove = clone.querySelectorAll('script, style, nav, header, footer, aside, .sidebar, .comments, .advertisement, .ad, [role="navigation"], [role="banner"], [role="contentinfo"]');
+      elementsToRemove.forEach((el: any) => el.remove());
+      
+      const html = clone.innerHTML?.trim();
+      const text = clone.textContent?.trim();
+      
+      // Only use if there's meaningful content (at least 100 chars)
+      if (text && text.length > 100) {
+        console.log(`Fallback extraction found content using selector: ${selector}`);
+        return { html: html || '', text };
+      }
+    }
+  }
+  
+  // Last resort: try to find any div with substantial text content
+  const allDivs = document.querySelectorAll('div');
+  let bestDiv: { html: string; text: string } | null = null;
+  let maxLength = 0;
+  
+  allDivs.forEach((div: any) => {
+    const text = div.textContent?.trim() || '';
+    // Look for divs with substantial content that aren't navigation-like
+    if (text.length > maxLength && text.length > 500) {
+      const className = div.className?.toLowerCase() || '';
+      const id = div.id?.toLowerCase() || '';
+      // Skip likely navigation/sidebar/footer elements
+      if (!className.match(/nav|menu|sidebar|footer|header|banner|ad/i) &&
+          !id.match(/nav|menu|sidebar|footer|header|banner|ad/i)) {
+        maxLength = text.length;
+        bestDiv = { html: div.innerHTML?.trim() || '', text };
+      }
+    }
+  });
+  
+  if (bestDiv) {
+    console.log('Fallback extraction used largest content div');
+    return bestDiv;
+  }
+  
+  return null;
 }
 
 async function processPDF(url: string): Promise<ProcessedContentResponse> {
