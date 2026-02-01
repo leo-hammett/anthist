@@ -1,0 +1,28 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        # Install root dependencies (includes Lambda function deps)
+        - npm ci
+        # Deploy Amplify Gen 2 backend resources
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Install website dependencies
+        - cd website && npm ci
+    build:
+      commands:
+        # Build the website
+        - cd website && npm run build
+  artifacts:
+    # Vite outputs to dist/ by default
+    baseDirectory: website/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - website/node_modules/**/*
