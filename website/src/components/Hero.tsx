@@ -22,7 +22,7 @@ export default function Hero() {
         <div className="animate-slide-up opacity-0">
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold mb-8">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Open Source & Free for 1,000 Users
+            Open Source Movement for Digital Wellness
           </span>
         </div>
 
@@ -35,9 +35,9 @@ export default function Hero() {
 
         {/* Subheadline */}
         <p className="animate-slide-up opacity-0 animation-delay-400 text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-          A TikTok for blogs and videos you actually want to watch. 
-          Curate your own beautiful collection—no algorithm manipulation, 
-          just mindful consumption.
+          Reclaiming the attention economy, one reader at a time. 
+          A feed for content you actually choose—an ethical algorithm that 
+          serves you, no dark patterns, just mindful consumption.
         </p>
 
         {/* CTA Buttons */}
@@ -127,8 +127,8 @@ export default function Hero() {
                   <span className="text-xl">✨</span>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900 text-sm">No algorithms</div>
-                  <div className="text-gray-500 text-xs">You choose content</div>
+                  <div className="font-semibold text-gray-900 text-sm">Ethical AI</div>
+                  <div className="text-gray-500 text-xs">Serves you, not ads</div>
                 </div>
               </div>
             </div>

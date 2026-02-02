@@ -1,47 +1,47 @@
 const stats = [
-  { value: '$240', label: 'Cost to serve 1,000 users/month' },
+  { value: '3.5hrs', label: 'Average daily screen time lost to algorithms' },
   { value: '100%', label: 'Open source codebase' },
-  { value: '1,000', label: 'Free users before monetization' },
-  { value: '4.5B', label: 'Digital wellness market size' },
+  { value: '4.5B', label: 'People affected by attention economy' },
+  { value: '∞', label: 'Long-term commitment to this mission' },
 ];
 
-const investorPoints = [
+const missionPoints = [
   {
-    title: 'Growing Market',
+    title: 'A Long-Horizon Mission',
     description:
-      'Digital wellness is a $4.5B market growing 20% annually. Users are actively seeking tools to combat algorithm addiction.',
+      'This isn\'t a quick startup flip. We\'re building infrastructure for a fundamental shift in how humanity consumes content—a decade-long commitment to ethical technology.',
   },
   {
-    title: 'Low Infrastructure Costs',
+    title: 'Reclaiming the Attention Economy',
     description:
-      'Serverless architecture on AWS means near-zero costs at low scale, with predictable linear growth.',
+      'Big tech has weaponized psychology against users. We\'re leading the counter-movement, proving that technology can serve human flourishing, not exploit it.',
   },
   {
-    title: 'Open Source Moat',
+    title: 'Open Source Foundation',
     description:
-      'Community-driven development builds trust and loyalty. Hosting the cloud service creates a natural SaaS opportunity.',
+      'By building in the open, we ensure this movement outlives any single company. The tools to reclaim attention should belong to everyone.',
   },
   {
-    title: 'Premium Upsell Path',
+    title: 'Measurable Impact',
     description:
-      "Quote maker, advanced analytics, family sharing—clear premium features that don't compromise the core free experience.",
+      'Every hour saved from doomscrolling is an hour returned to creativity, learning, and connection. We\'re building tools to quantify and maximize this impact.',
   },
 ];
 
 export default function Stats() {
   return (
-    <section id="pricing" className="py-24 md:py-32 bg-white">
+    <section id="mission" className="py-24 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-indigo-600 font-semibold text-sm uppercase tracking-wider">
-            For Investors
+            Our Mission
           </span>
           <h2 className="mt-4 text-4xl md:text-5xl font-serif font-bold text-gray-900 tracking-tight">
-            The numbers speak for themselves
+            Leading the push to reclaim attention
           </h2>
           <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-            The mindful content consumption market is growing as users seek 
-            alternatives to addictive algorithms.
+            The attention economy has cost humanity billions of hours. 
+            We're building the tools to take it back.
           </p>
         </div>
 
@@ -57,9 +57,9 @@ export default function Stats() {
           ))}
         </div>
 
-        {/* Investor Points */}
+        {/* Mission Points */}
         <div className="grid md:grid-cols-2 gap-8">
-          {investorPoints.map((point, index) => (
+          {missionPoints.map((point, index) => (
             <div
               key={index}
               className="flex gap-4 p-6 rounded-xl bg-gray-50 hover-lift"

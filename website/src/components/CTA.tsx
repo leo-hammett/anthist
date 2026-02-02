@@ -14,11 +14,11 @@ export default function CTA() {
     <section id="get-started" className="py-24 md:py-32 bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 text-center">
         <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-gray-900 tracking-tight mb-6">
-          Ready to reclaim your attention?
+          Join the movement
         </h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Join the first 1,000 users and get free access to the Anthist cloud 
-          service. No credit card required.
+          Be part of the generation that reclaims control over attention. 
+          Early supporters get access to shape the future of mindful content consumption.
         </p>
 
         {submitted ? (
@@ -47,7 +47,7 @@ export default function CTA() {
               </button>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              Free for 1,000 users. No spam, unsubscribe anytime.
+              Join our community of mindful readers. No spam, ever.
             </p>
           </form>
         )}

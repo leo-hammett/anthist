@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -21,8 +21,29 @@ export default function AddContentScreen() {
   const isDark = colorScheme === 'dark';
   
   const { user } = useAuthStore();
+  
+  // Get URL from share extension or deep link
+  const { url: sharedUrl } = useLocalSearchParams<{ url?: string }>();
 
   const [url, setUrl] = useState('');
+  
+  // Auto-populate and process URL from share extension
+  useEffect(() => {
+    if (sharedUrl && isValidUrl(sharedUrl)) {
+      setUrl(sharedUrl);
+      // Auto-process if URL came from share extension
+      const detected = detectContentType(sharedUrl);
+      if (detected.type !== 'youtube_playlist' && user) {
+        // Small delay to let the UI render first
+        setTimeout(() => {
+          router.push({
+            pathname: '/(main)/processing',
+            params: { url: sharedUrl },
+          });
+        }, 100);
+      }
+    }
+  }, [sharedUrl, user]);
   const [error, setError] = useState<string | null>(null);
 
   const handleAddUrl = () => {

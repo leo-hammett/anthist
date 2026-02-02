@@ -33,8 +33,8 @@ export default function Navbar() {
           <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
             How it Works
           </a>
-          <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-            Pricing
+          <a href="#mission" className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
+            Mission
           </a>
           <a
             href="https://github.com/leo-hammett/anthist"
@@ -78,8 +78,8 @@ export default function Navbar() {
             <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors font-medium py-2">
               How it Works
             </a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors font-medium py-2">
-              Pricing
+            <a href="#mission" className="text-gray-600 hover:text-gray-900 transition-colors font-medium py-2">
+              Mission
             </a>
             <a
               href="https://github.com/leo-hammett/anthist"

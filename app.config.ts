@@ -66,6 +66,37 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         iCloudContainerEnvironment: 'Production',
       },
     ],
+    [
+      'expo-share-extension',
+      {
+        // Activation rules for what content types can be shared
+        activationRules: [
+          {
+            type: 'url',
+            max: 1,
+          },
+          {
+            type: 'text',
+          },
+        ],
+        // Custom background with slight transparency
+        backgroundColor: {
+          red: 10,
+          green: 10,
+          blue: 10,
+          alpha: 0.95,
+        },
+        // Custom height for the share sheet
+        height: 400,
+        // Exclude unnecessary packages from share extension bundle
+        excludedPackages: [
+          'expo-dev-client',
+          'expo-splash-screen',
+          'expo-updates',
+          'expo-sensors',
+        ],
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

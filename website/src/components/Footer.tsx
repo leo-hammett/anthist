@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#0a0a0a] text-gray-400 py-16 md:py-20">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-12 mb-12">
           {/* Brand */}
           <div className="md:col-span-2">
             <a href="/" className="font-serif text-2xl font-bold text-white mb-4 block">
@@ -69,6 +69,29 @@ export default function Footer() {
                   className="text-sm hover:text-white transition-colors"
                 >
                   Contact
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="text-white font-semibold mb-4">Legal</h4>
+            <ul className="space-y-3">
+              <li>
+                <a
+                  href="#/privacy"
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#/cookies"
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Cookie Policy
                 </a>
               </li>
             </ul>

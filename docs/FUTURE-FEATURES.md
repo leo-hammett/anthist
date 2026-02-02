@@ -52,59 +52,24 @@ Allow users to select text from any blog or article and transform it into beauti
 
 ---
 
-## Favorites System
-
-**Priority:** High  
-**Complexity:** Low
-
-### Overview
-Let users mark content as favorites for quick access. Favorites are special—content you want to return to, share, or remember.
-
-### Features
-
-#### Favoriting
-- Heart/star button in double-tap menu (not cluttering the reading experience)
-- Haptic feedback on favorite
-- Animation feedback (heart float, pulse)
-
-#### Favorites View
-- Dedicated "Favorites" section accessible from menu
-- Grid or list view options
-- Sort by: date added, title, type
-- Filter by: content type, tags
-
-#### Favorites Feed
-- Option to view favorites as a swipeable feed
-- Great for re-reading favorite articles
-- "Surprise me" - random favorite
-
-### Data Model
-```typescript
-// Add to Content model
-isFavorite: boolean
-favoritedAt: datetime
-```
-
-### UI Location
-- Double-tap menu: "Add to Favorites" / "Remove from Favorites"
-- Favorites view: Menu > Favorites
-
----
+## Playlist System
+In the menu we're going to upgrade My Content to have Playlists.
+Each playlist can be shown, hidden, renamed (not in bulk) or deleted, or opened to see it's individual content.
+Each user must have a default playlist where imported content is added by default.
+When individual playlists are opened, their content can be moved (to a different playlist), deleted, shown or hidden.
+Duplicated content (in two playlists) can be recommended often but the recommendation algorithms should be intelligent enough to relalise the user has already seen this.
 
 ## Social Features (Future)
 
 **Priority:** Medium  
 **Complexity:** High
 
-### Friend Feeds
-- Follow friends to see their public anthology
-- Share your reading list (opt-in)
-- Discover content through trusted connections
-
-### Reading Clubs
-- Create private groups for shared reading
-- Book club-style discussions
-- Synchronized reading challenges
+### Follow playlists
+Playlists can be followed by sharing a secret code to them.
+Playlist admins can see the email addresses of each follower and block them if they wish from that playlist, at which point the follower cannot see the playlist in my content etc.
+Followers who are not editors can show or hide the playlist to decide wether or not it is in their own feed, but cannot move content into the playlist or out of it (they can copy out of it if they want instead)
+Playlist followers can also be promoted to editors by the admins, where the editors can now contribute to the playlist by adding content too.
+Playlists are synced between everyone forever.
 
 ---
 

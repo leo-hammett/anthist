@@ -1,6 +1,8 @@
 import { downloadData } from 'aws-amplify/storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+// Use ScrollView from gesture-handler for proper gesture coordination with carousel
+import { ScrollView } from 'react-native-gesture-handler';
 import RenderHtml from 'react-native-render-html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -108,20 +110,12 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   }, [content.id, user, reprocessContent, isThisReprocessing]);
 
   // Create placeholder HTML when content isn't available
-  function createPlaceholderHtml(content: Content, message: string): string {
-    const readingTime = content.wordCount 
-      ? `${Math.ceil(content.wordCount / 200)} min read` 
-      : '';
-    
+  function createPlaceholderHtml(content: Content, _message: string): string {
     return `
       <article>
         <h1>${escapeHtml(content.title)}</h1>
         ${content.author ? `<p class="byline">By ${escapeHtml(content.author)}</p>` : ''}
-        ${readingTime ? `<p class="reading-time">${readingTime}</p>` : ''}
         ${content.description ? `<p class="excerpt">${escapeHtml(content.description)}</p>` : ''}
-        <hr />
-        <p><em>${message}</em></p>
-        <p><a href="${content.url}">Read on original site</a></p>
       </article>
     `;
   }
@@ -143,7 +137,7 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   }, [isActive, content.scrollPosition]);
 
   // Handle scroll events for telemetry
-  const handleScroll = useCallback((event: any) => {
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const currentY = contentOffset.y;
     const maxScroll = contentSize.height - layoutMeasurement.height;
@@ -200,17 +194,26 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+    // collapsable={false} is required on iOS for proper ScrollView behavior
+    // This prevents text clipping issues at the top of the screen
+    <View 
+      style={[styles.container, { backgroundColor: theme.backgroundColor }]} 
+      collapsable={false}
+    >
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 60 },
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 60 },
         ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        // Ensure content is never clipped on iOS
+        contentInsetAdjustmentBehavior="never"
+        // Allow scroll view to handle gestures properly with the carousel
+        keyboardShouldPersistTaps="handled"
       >
       {htmlContent && (
         <RenderHtml
@@ -281,14 +284,29 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
         />
       )}
       
-      {/* Reprocess button for failed/unprocessed content */}
+      {/* Content not extracted notice */}
       {needsReprocessing && (
-        <View style={styles.reprocessContainer}>
+        <View style={[styles.notExtractedContainer, { borderColor: theme.accentColor + '40' }]}>
+          <View style={[styles.notExtractedIconContainer, { backgroundColor: theme.accentColor + '20' }]}>
+            <Text style={styles.notExtractedIcon}>📄</Text>
+          </View>
+          
+          <Text style={[styles.notExtractedTitle, { color: theme.textColor }]}>
+            Content Not Yet Extracted
+          </Text>
+          
+          <Text style={[styles.notExtractedMessage, { color: theme.textColor, opacity: 0.7 }]}>
+            {isThisReprocessing 
+              ? 'Extracting the article content...\nThis may take a moment.'
+              : 'The full article hasn\'t been extracted yet.\nTry re-visiting this content in a moment, or tap below to extract now.'
+            }
+          </Text>
+          
           <Pressable 
             style={[
-              styles.reprocessButton, 
+              styles.forceExtractButton, 
               { backgroundColor: theme.accentColor },
-              isThisReprocessing && styles.reprocessButtonDisabled,
+              isThisReprocessing && styles.forceExtractButtonDisabled,
             ]}
             onPress={handleReprocess}
             disabled={isThisReprocessing}
@@ -296,12 +314,18 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
             {isThisReprocessing ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.reprocessButtonText}>Extract Content</Text>
+              <Text style={styles.forceExtractButtonText}>Force Extract Content</Text>
             )}
           </Pressable>
-          <Text style={[styles.reprocessHint, { color: theme.textColor, opacity: 0.6 }]}>
-            {isThisReprocessing ? 'Extracting article...' : 'Tap to extract the full article'}
-          </Text>
+          
+          <Pressable 
+            style={styles.visitOriginalLink}
+            onPress={() => Linking.openURL(content.url)}
+          >
+            <Text style={[styles.visitOriginalText, { color: theme.linkColor }]}>
+              Or visit the original site →
+            </Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -324,28 +348,59 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 100,
   },
-  reprocessContainer: {
+  notExtractedContainer: {
     alignItems: 'center',
-    marginTop: 24,
-    paddingVertical: 16,
-  },
-  reprocessButton: {
+    marginTop: 32,
+    marginHorizontal: 8,
+    paddingVertical: 32,
     paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  notExtractedIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  notExtractedIcon: {
+    fontSize: 28,
+  },
+  notExtractedTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  notExtractedMessage: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  forceExtractButton: {
+    paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 12,
-    minWidth: 180,
+    minWidth: 200,
     alignItems: 'center',
   },
-  reprocessButtonDisabled: {
+  forceExtractButtonDisabled: {
     opacity: 0.7,
   },
-  reprocessButtonText: {
+  forceExtractButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
   },
-  reprocessHint: {
+  visitOriginalLink: {
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  visitOriginalText: {
     fontSize: 14,
-    marginTop: 12,
   },
 });

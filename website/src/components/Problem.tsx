@@ -3,7 +3,7 @@ const problems = [
     icon: '🎯',
     title: 'Algorithms Control You',
     description:
-      "TikTok, YouTube, and Instagram decide what you see based on what keeps you scrolling—not what's actually valuable to you.",
+      "Social media platforms decide what you see based on what keeps you scrolling—not what's actually valuable to you.",
   },
   {
     icon: '⏰',
@@ -28,11 +28,11 @@ export default function Problem() {
             The Problem
           </span>
           <h2 className="mt-4 text-4xl md:text-5xl font-serif font-bold text-gray-900 tracking-tight">
-            Modern content is broken
+            The attention economy is broken
           </h2>
           <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-            Social media algorithms are designed to maximize engagement, 
-            not enrich your life.
+            Humanity loses billions of hours to algorithms designed for engagement, 
+            not enrichment. This is the defining challenge of our digital age.
           </p>
         </div>
 
