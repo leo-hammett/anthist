@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import SwipeContainer from '../../components/feed/SwipeContainer';
 import { getAllThemes, getDefaultTheme, getThemeForContent, getThemesByCategory, ReaderTheme } from '../../components/themes';
 import OnboardingOverlay from '../../components/tutorial/OnboardingOverlay';
@@ -10,49 +11,63 @@ import { useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
 
 export default function FeedScreen() {
+  // All hooks must be called unconditionally and in the same order every render
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
-  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { fetchContents, isLoading: feedLoading, getCurrentContent, setThemeOverride, getThemeOverride } = useFeedStore();
+  // Use individual selectors for better performance and stability
+  const user = useAuthStore(state => state.user);
+  const fetchContents = useFeedStore(state => state.fetchContents);
+  const getCurrentContent = useFeedStore(state => state.getCurrentContent);
+  const setThemeOverride = useFeedStore(state => state.setThemeOverride);
+  const getThemeOverride = useFeedStore(state => state.getThemeOverride);
   
   const [showTutorial, setShowTutorial] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'dark' | 'light' | 'specialty'>(isDark ? 'dark' : 'light');
   
-  // Get current theme for the current content
-  const getCurrentTheme = useCallback((): ReaderTheme => {
-    const current = getCurrentContent();
-    if (!current) return getDefaultTheme(isDark);
-    
-    const override = getThemeOverride(current.id);
-    if (override) {
-      const theme = getAllThemes().find(t => t.id === override);
-      if (theme) return theme;
+  // Memoize current theme to prevent unnecessary recalculations
+  const currentTheme = useMemo((): ReaderTheme => {
+    try {
+      const current = getCurrentContent();
+      if (!current) return getDefaultTheme(isDark);
+      
+      const override = getThemeOverride(current.id);
+      if (override) {
+        const theme = getAllThemes().find(t => t.id === override);
+        if (theme) return theme;
+      }
+      
+      if (current.semanticTags?.length) {
+        return getThemeForContent(current.semanticTags, isDark);
+      }
+      
+      return getDefaultTheme(isDark);
+    } catch {
+      // Fallback to default theme on any error
+      return getDefaultTheme(isDark);
     }
-    
-    if (current.semanticTags?.length) {
-      return getThemeForContent(current.semanticTags, isDark);
-    }
-    
-    return getDefaultTheme(isDark);
   }, [getCurrentContent, getThemeOverride, isDark]);
-  
-  const currentTheme = getCurrentTheme();
+
+  // Memoize user ID for stable effect dependencies
+  const userId = useMemo(() => user?.cognitoId ?? null, [user?.cognitoId]);
+  const hasSeenTutorial = useMemo(() => user?.hasSeenTutorial ?? true, [user?.hasSeenTutorial]);
 
   // Initialize feed and telemetry
   useEffect(() => {
-    if (user?.cognitoId) {
-      telemetryTracker.setUserId(user.cognitoId);
-      fetchContents(user.cognitoId);
+    if (userId) {
+      telemetryTracker.setUserId(userId);
+      fetchContents(userId).catch(err => {
+        console.warn('Failed to fetch contents:', err);
+      });
       
       // Show tutorial for new users
-      if (!user.hasSeenTutorial) {
+      if (!hasSeenTutorial) {
         setShowTutorial(true);
       }
     }
-  }, [user?.cognitoId, user?.hasSeenTutorial]);
+  }, [userId, hasSeenTutorial, fetchContents]);
 
   // Setup gyroscope for engagement tracking (native only)
   useEffect(() => {
@@ -87,15 +102,25 @@ export default function FeedScreen() {
 
     return () => {
       mounted = false;
-      subscription?.remove();
+      if (subscription) {
+        try {
+          subscription.remove();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     };
   }, []);
 
-  // Start session for current content
+  // Start session for current content - use stable reference check
   useEffect(() => {
-    const current = getCurrentContent();
-    if (current) {
-      telemetryTracker.startSession(current.id);
+    try {
+      const current = getCurrentContent();
+      if (current?.id) {
+        telemetryTracker.startSession(current.id);
+      }
+    } catch (err) {
+      console.warn('Failed to start telemetry session:', err);
     }
   }, [getCurrentContent]);
 
@@ -161,8 +186,10 @@ export default function FeedScreen() {
         translucent
       />
 
-      {/* Main Feed */}
-      <SwipeContainer onDoubleTap={handleDoubleTap} />
+      {/* Main Feed - wrapped in error boundary for stability */}
+      <ErrorBoundary>
+        <SwipeContainer onDoubleTap={handleDoubleTap} />
+      </ErrorBoundary>
 
       {/* Onboarding Tutorial */}
       {showTutorial && (

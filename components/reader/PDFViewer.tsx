@@ -1,19 +1,24 @@
 import { getUrl } from 'aws-amplify/storage';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { Content } from '../../lib/store/feedStore';
 import { IconSymbol } from '../ui/icon-symbol';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface PDFViewerProps {
-  content: Content;
+  content: {
+    id: string;
+    url: string;
+    title: string;
+    s3Key?: string;
+  };
   isActive: boolean;
 }
 
 export default function PDFViewer({ content, isActive }: PDFViewerProps) {
+  // All hooks must be called unconditionally and in the same order every render
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
@@ -22,8 +27,18 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [pdfSource, setPdfSource] = useState<string | null>(null);
 
+  // Handle WebView errors
+  const handleWebViewError = useCallback((errorMessage: string) => {
+    console.error('WebView error:', errorMessage);
+    setError('Failed to display PDF');
+  }, []);
+
   useEffect(() => {
+    let isMounted = true;
+
     async function loadPDF() {
+      if (!isMounted) return;
+      
       setIsLoading(true);
       setError(null);
 
@@ -32,32 +47,56 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
           // Get presigned URL from S3
           try {
             const result = await getUrl({ path: content.s3Key });
-            setPdfSource(result.url.toString());
+            if (isMounted) {
+              setPdfSource(result.url.toString());
+            }
           } catch (s3Error) {
             console.warn('S3 URL generation failed:', s3Error);
             // Fall back to direct URL if available
-            if (content.url) {
-              setPdfSource(content.url);
-            } else {
-              setError('Failed to load PDF from storage');
+            if (isMounted) {
+              if (content.url) {
+                setPdfSource(content.url);
+              } else {
+                setError('Failed to load PDF from storage');
+              }
             }
           }
         } else if (content.url) {
           // Direct URL to PDF
-          setPdfSource(content.url);
+          if (isMounted) {
+            setPdfSource(content.url);
+          }
         } else {
-          setError('No PDF source available');
+          if (isMounted) {
+            setError('No PDF source available');
+          }
         }
       } catch (err) {
-        setError('Failed to load PDF');
         console.error('Error loading PDF:', err);
+        if (isMounted) {
+          setError('Failed to load PDF');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
     loadPDF();
+
+    return () => {
+      isMounted = false;
+    };
   }, [content.id, content.s3Key, content.url]);
+
+  // Memoize the PDF viewer URL
+  const pdfViewerUrl = useMemo(() => {
+    if (!pdfSource) return null;
+    return Platform.OS === 'web' 
+      ? pdfSource // Web browsers can render PDFs natively
+      : `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(pdfSource)}`;
+  }, [pdfSource]);
 
   if (isLoading) {
     return (
@@ -94,17 +133,20 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
   }
 
   // Open PDF externally (fallback)
-  const openExternally = () => {
+  const openExternally = useCallback(() => {
     if (pdfSource) {
-      Linking.openURL(pdfSource);
+      Linking.openURL(pdfSource).catch(err => {
+        console.warn('Failed to open URL:', err);
+      });
     }
-  };
+  }, [pdfSource]);
 
-  // Render PDF using WebView with Google Docs viewer for web compatibility
-  // On native, react-native-pdf would be better but requires native build
-  const pdfViewerUrl = Platform.OS === 'web' 
-    ? pdfSource // Web browsers can render PDFs natively
-    : `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(pdfSource)}`;
+  // Render loading state for WebView
+  const renderLoading = useCallback(() => (
+    <View style={styles.loadingOverlay}>
+      <ActivityIndicator size="large" color={isDark ? '#FFF' : '#000'} />
+    </View>
+  ), [isDark]);
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
@@ -123,27 +165,22 @@ export default function PDFViewer({ content, isActive }: PDFViewerProps) {
         // Web: Use native iframe
         <View style={styles.webContainer}>
           <iframe
-            src={pdfSource}
+            src={pdfSource ?? ''}
             style={{ width: '100%', height: '100%', border: 'none' }}
             title={content.title}
           />
         </View>
       ) : (
         // Native: Use WebView with Google Docs viewer
-        <WebView
-          source={{ uri: pdfViewerUrl }}
-          style={styles.webview}
-          startInLoadingState
-          renderLoading={() => (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={isDark ? '#FFF' : '#000'} />
-            </View>
-          )}
-          onError={(event) => {
-            console.error('WebView error:', event.nativeEvent);
-            setError('Failed to display PDF');
-          }}
-        />
+        pdfViewerUrl && (
+          <WebView
+            source={{ uri: pdfViewerUrl }}
+            style={styles.webview}
+            startInLoadingState
+            renderLoading={renderLoading}
+            onError={(event) => handleWebViewError(event.nativeEvent.description ?? 'Unknown error')}
+          />
+        )
       )}
     </View>
   );

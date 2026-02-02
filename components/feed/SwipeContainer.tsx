@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureType } from 'react-native-gesture-handler';
 import { interpolate } from 'react-native-reanimated';
@@ -15,41 +15,51 @@ interface SwipeContainerProps {
 }
 
 export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
+  // All hooks must be called unconditionally and in the same order every render
   const carouselRef = useRef<ICarouselInstance>(null);
   const lastTapRef = useRef<number>(0);
+  // Track the previous index for telemetry (using ref to avoid stale closure issues)
+  const previousIndexRef = useRef<number>(0);
   
-  const {
-    contents,
-    rankedContentIds,
-    currentIndex,
-    goToNext,
-    goToPrevious,
-    goToIndex,
-    getContentById,
-  } = useFeedStore();
+  // Use separate selectors to minimize re-renders and ensure stable references
+  const contents = useFeedStore(state => state.contents);
+  const rankedContentIds = useFeedStore(state => state.rankedContentIds);
+  const currentIndex = useFeedStore(state => state.currentIndex);
+  const goToIndex = useFeedStore(state => state.goToIndex);
 
-  // Get ordered content based on rankings
-  const orderedContent = rankedContentIds
-    .map(id => getContentById(id))
-    .filter((c): c is Content => c !== null);
+  // Memoize ordered content to prevent unnecessary recalculations
+  // This ensures stable reference when dependencies haven't changed
+  const orderedContent = useMemo(() => {
+    return rankedContentIds
+      .map(id => contents.find(c => c.id === id))
+      .filter((c): c is Content => c !== null && c.status === 'ACTIVE');
+  }, [rankedContentIds, contents]);
 
+  // Memoize content IDs for stable dependency in callbacks
+  const orderedContentIds = useMemo(() => {
+    return orderedContent.map(c => c.id);
+  }, [orderedContent]);
+
+  // Handle snap with stable callback - uses refs to avoid stale closures
   const handleSnapToItem = useCallback((index: number) => {
-    const previousIndex = currentIndex;
+    const previousIndex = previousIndexRef.current;
     
-    // End previous session
-    if (previousIndex !== index) {
+    // End previous session and start new one
+    if (previousIndex !== index && orderedContentIds.length > 0) {
       const direction = index > previousIndex ? 'NEXT' : 'BACK';
       telemetryTracker.endSession(direction);
       
-      // Start new session
-      const newContent = orderedContent[index];
-      if (newContent) {
-        telemetryTracker.startSession(newContent.id);
+      // Start new session with the content at new index
+      const newContentId = orderedContentIds[index];
+      if (newContentId) {
+        telemetryTracker.startSession(newContentId);
       }
     }
     
+    // Update the ref for next comparison
+    previousIndexRef.current = index;
     goToIndex(index);
-  }, [currentIndex, orderedContent, goToIndex]);
+  }, [orderedContentIds, goToIndex]);
 
   const handleTap = useCallback(() => {
     const now = Date.now();
@@ -67,7 +77,7 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
   }, [onDoubleTap]);
 
   // Custom animation: fullscreen at rest, subtle scale during swipe
-  // NOTE: Must be defined before early return to maintain hooks order
+  // Empty dependency array since this uses only constants
   const customAnimation = useCallback((value: number) => {
     'worklet';
     const scale = interpolate(
@@ -96,8 +106,7 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
   }, []);
 
   // Configure pan gesture to allow vertical scrolling to pass through
-  // This fixes the conflict between horizontal carousel swipes and vertical content scrolling
-  // NOTE: Must be defined before early return to maintain hooks order
+  // Empty dependency array since this uses only constants
   const configurePanGesture = useCallback((gesture: GestureType) => {
     'worklet';
     // Only activate horizontal carousel gesture after significant horizontal movement
@@ -108,10 +117,26 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
     gesture.failOffsetY([-5, 5]);
   }, []);
 
+  // Memoize the render function to prevent unnecessary re-renders of carousel items
+  const renderItem = useCallback(({ item, index }: { item: Content; index: number }) => (
+    <ContentCard
+      content={item}
+      isActive={index === currentIndex}
+      onTap={handleTap}
+    />
+  ), [currentIndex, handleTap]);
+
   // Show empty state if no content
+  // Note: All hooks have been called above, so this early return is safe
   if (orderedContent.length === 0) {
     return <EmptyFeed onDoubleTap={onDoubleTap} />;
   }
+
+  // Ensure currentIndex is within bounds to prevent crashes
+  const safeDefaultIndex = Math.min(
+    Math.max(0, currentIndex),
+    orderedContent.length - 1
+  );
 
   return (
     <View style={styles.container}>
@@ -121,19 +146,16 @@ export default function SwipeContainer({ onDoubleTap }: SwipeContainerProps) {
         width={SCREEN_WIDTH}
         height={SCREEN_HEIGHT}
         loop={false}
-        defaultIndex={currentIndex}
+        defaultIndex={safeDefaultIndex}
         onSnapToItem={handleSnapToItem}
         onConfigurePanGesture={configurePanGesture}
-        renderItem={({ item, index }) => (
-          <ContentCard
-            content={item}
-            isActive={index === currentIndex}
-            onTap={handleTap}
-          />
-        )}
+        renderItem={renderItem}
         // Smooth animation - fullscreen content with subtle swipe effect
         scrollAnimationDuration={300}
         customAnimation={customAnimation}
+        // Performance optimizations
+        windowSize={3}
+        maxRenderPerBatch={3}
       />
     </View>
   );

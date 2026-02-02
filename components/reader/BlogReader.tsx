@@ -1,63 +1,88 @@
 import { downloadData } from 'aws-amplify/storage';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 // Use ScrollView from gesture-handler for proper gesture coordination with carousel
 import { ScrollView } from 'react-native-gesture-handler';
 import RenderHtml from 'react-native-render-html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../lib/store/authStore';
-import { Content, useFeedStore } from '../../lib/store/feedStore';
+import { useFeedStore } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
 import { getAllThemes, getDefaultTheme, getThemeForContent, ReaderTheme } from '../themes';
 
 interface BlogReaderProps {
-  content: Content;
+  content: {
+    id: string;
+    url: string;
+    title: string;
+    author?: string;
+    description?: string;
+    s3Key?: string;
+    semanticTags?: string[];
+    scrollPosition: number;
+  };
   isActive: boolean;
 }
 
 export default function BlogReader({ content, isActive }: BlogReaderProps) {
+  // All hooks must be called unconditionally and in the same order every render
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const isDark = colorScheme === 'dark';
   
-  const { user } = useAuthStore();
-  const { reprocessContent, isReprocessing, getThemeOverride } = useFeedStore();
-  const isThisReprocessing = isReprocessing === content.id;
+  // Use selectors for better performance
+  const user = useAuthStore(state => state.user);
+  const reprocessContent = useFeedStore(state => state.reprocessContent);
+  const isReprocessing = useFeedStore(state => state.isReprocessing);
+  const getThemeOverride = useFeedStore(state => state.getThemeOverride);
+  
+  // Memoize derived state
+  const isThisReprocessing = useMemo(() => 
+    isReprocessing === content.id, 
+    [isReprocessing, content.id]
+  );
   
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsReprocessing, setNeedsReprocessing] = useState(false);
 
-  // Scroll tracking
+  // Scroll tracking refs (not hooks, just refs)
   const scrollStartTime = useRef<number>(0);
   const lastScrollY = useRef<number>(0);
   const scrollPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentHeight = useRef<number>(1);
 
-  // Get theme - use store override or smart matching
-  const getActiveTheme = useCallback((): ReaderTheme => {
-    const themeOverride = getThemeOverride(content.id);
-    if (themeOverride) {
-      const overrideTheme = getAllThemes().find(t => t.id === themeOverride);
-      if (overrideTheme) return overrideTheme;
+  // Memoize theme to prevent unnecessary recalculations
+  const theme = useMemo((): ReaderTheme => {
+    try {
+      const themeOverride = getThemeOverride(content.id);
+      if (themeOverride) {
+        const overrideTheme = getAllThemes().find(t => t.id === themeOverride);
+        if (overrideTheme) return overrideTheme;
+      }
+      
+      // Use smart matching based on content semantic tags
+      if (content.semanticTags?.length) {
+        return getThemeForContent(content.semanticTags, isDark);
+      }
+      
+      return getDefaultTheme(isDark);
+    } catch {
+      // Fallback to default theme on any error
+      return getDefaultTheme(isDark);
     }
-    
-    // Use smart matching based on content semantic tags
-    if (content.semanticTags?.length) {
-      return getThemeForContent(content.semanticTags, isDark);
-    }
-    
-    return getDefaultTheme(isDark);
   }, [content.id, content.semanticTags, isDark, getThemeOverride]);
-
-  const theme = getActiveTheme();
 
   // Load content from S3 or show placeholder
   useEffect(() => {
+    let isMounted = true;
+
     async function loadContent() {
+      if (!isMounted) return;
+      
       setIsLoading(true);
       setError(null);
       setNeedsReprocessing(false);
@@ -70,32 +95,46 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
               path: content.s3Key,
             }).result;
             const text = await result.body.text();
-            setHtmlContent(text);
+            if (isMounted) {
+              setHtmlContent(text);
+            }
           } catch (s3Error) {
             console.warn('S3 fetch failed, needs reprocessing:', s3Error);
             // Content exists in DB but S3 failed - needs reprocessing
-            setHtmlContent(createPlaceholderHtml(content, 'Content needs to be re-extracted.'));
-            setNeedsReprocessing(true);
+            if (isMounted) {
+              setHtmlContent(createPlaceholderHtml(content, 'Content needs to be re-extracted.'));
+              setNeedsReprocessing(true);
+            }
           }
         } else {
           // No stored content yet - needs processing
           const isStillProcessing = content.title === 'Processing...';
-          if (isStillProcessing) {
-            setHtmlContent(createPlaceholderHtml(content, 'Processing failed. Tap to retry.'));
-          } else {
-            setHtmlContent(createPlaceholderHtml(content, 'Content not extracted yet.'));
+          if (isMounted) {
+            if (isStillProcessing) {
+              setHtmlContent(createPlaceholderHtml(content, 'Processing failed. Tap to retry.'));
+            } else {
+              setHtmlContent(createPlaceholderHtml(content, 'Content not extracted yet.'));
+            }
+            setNeedsReprocessing(true);
           }
-          setNeedsReprocessing(true);
         }
       } catch (err) {
-        setError('Failed to load content');
         console.error('Error loading blog content:', err);
+        if (isMounted) {
+          setError('Failed to load content');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
     loadContent();
+
+    return () => {
+      isMounted = false;
+    };
   }, [content.id, content.s3Key, content.title]);
 
   // Handle reprocessing

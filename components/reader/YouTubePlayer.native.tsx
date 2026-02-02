@@ -1,20 +1,28 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { extractYouTubeVideoId } from '../../lib/content/extractor';
-import { Content } from '../../lib/store/feedStore';
 import { telemetryTracker } from '../../lib/telemetry/tracker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const VIDEO_HEIGHT = (SCREEN_WIDTH * 9) / 16; // 16:9 aspect ratio
 
 interface YouTubePlayerProps {
-  content: Content;
+  content: {
+    id: string;
+    url: string;
+    title: string;
+    author?: string;
+    description?: string;
+    publishedAt?: string;
+    videoPosition: number;
+  };
   isActive: boolean;
 }
 
 export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps) {
+  // All hooks must be called unconditionally and in the same order every render
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
@@ -23,15 +31,27 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [playerReady, setPlayerReady] = useState(false);
 
-  const videoId = extractYouTubeVideoId(content.url);
+  // Memoize video ID extraction to avoid recalculation
+  const videoId = useMemo(() => {
+    try {
+      return extractYouTubeVideoId(content.url);
+    } catch {
+      return null;
+    }
+  }, [content.url]);
 
   // Resume from saved position
   useEffect(() => {
-    if (isActive && content.videoPosition > 0 && playerRef.current) {
-      playerRef.current.seekTo(content.videoPosition, true);
+    if (isActive && content.videoPosition > 0 && playerRef.current && playerReady) {
+      try {
+        playerRef.current.seekTo(content.videoPosition, true);
+      } catch (err) {
+        console.warn('Failed to seek to saved position:', err);
+      }
     }
-  }, [isActive, content.videoPosition]);
+  }, [isActive, content.videoPosition, playerReady]);
 
   // Auto-pause when not active
   useEffect(() => {
@@ -42,20 +62,27 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
 
   // Track video progress for telemetry
   useEffect(() => {
+    if (!isPlaying || !playerReady) return;
+
     const interval = setInterval(async () => {
-      if (isPlaying && playerRef.current) {
-        const time = await playerRef.current.getCurrentTime();
-        setCurrentTime(time);
-        
-        if (duration > 0) {
-          const completionRate = time / duration;
-          telemetryTracker.updateVideoCompletion(completionRate);
+      try {
+        if (playerRef.current) {
+          const time = await playerRef.current.getCurrentTime();
+          setCurrentTime(time);
+          
+          if (duration > 0) {
+            const completionRate = time / duration;
+            telemetryTracker.updateVideoCompletion(completionRate);
+          }
         }
+      } catch (err) {
+        // Player might not be ready, ignore error
+        console.warn('Failed to get current time:', err);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, playerReady]);
 
   const handleStateChange = useCallback((state: string) => {
     if (state === 'playing') {
@@ -70,12 +97,23 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
   }, []);
 
   const handleReady = useCallback(async () => {
-    if (playerRef.current) {
-      const dur = await playerRef.current.getDuration();
-      setDuration(dur);
+    setPlayerReady(true);
+    try {
+      if (playerRef.current) {
+        const dur = await playerRef.current.getDuration();
+        setDuration(dur);
+      }
+    } catch (err) {
+      console.warn('Failed to get video duration:', err);
     }
   }, []);
 
+  const handleError = useCallback((error: string) => {
+    console.warn('YouTube player error:', error);
+    setIsPlaying(false);
+  }, []);
+
+  // All hooks called above - now safe to do early returns
   if (!videoId) {
     return (
       <View style={[styles.container, isDark && styles.containerDark]}>
@@ -99,9 +137,10 @@ export default function YouTubePlayer({ content, isActive }: YouTubePlayerProps)
           height={VIDEO_HEIGHT}
           width={SCREEN_WIDTH}
           videoId={videoId}
-          play={isPlaying && isActive}
+          play={isPlaying && isActive && playerReady}
           onChangeState={handleStateChange}
           onReady={handleReady}
+          onError={handleError}
           webViewProps={{
             allowsInlineMediaPlayback: true,
             mediaPlaybackRequiresUserAction: false,
