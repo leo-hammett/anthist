@@ -1,4 +1,86 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
+import { ConfigPlugin, withXcodeProject } from 'expo/config-plugins';
+eas build --platform android
+// Config plugin to apply custom Xcode build settings
+const withCustomXcodeSettings: ConfigPlugin = (config) => {
+  return withXcodeProject(config, async (config) => {
+    const xcodeProject = config.modResults;
+    
+    // Get all build configurations
+    const configurations = xcodeProject.pbxXCBuildConfigurationSection();
+    
+    for (const key in configurations) {
+      const buildSettings = configurations[key]?.buildSettings;
+      if (!buildSettings) continue;
+      
+      const name = configurations[key]?.name;
+      
+      // Apply to main app target configurations
+      if (buildSettings.PRODUCT_BUNDLE_IDENTIFIER === 'com.anthist.app' || 
+          buildSettings.PRODUCT_NAME === 'Anthist') {
+        // Development team
+        buildSettings.DEVELOPMENT_TEAM = 'G2WXN4J37T';
+        
+        // iOS deployment target
+        buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '15.1';
+        
+        // macOS support
+        buildSettings.SUPPORTED_PLATFORMS = '"iphoneos iphonesimulator macosx"';
+        buildSettings.SUPPORTS_MACCATALYST = 'NO';
+        buildSettings.SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = 'NO';
+        buildSettings.SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = 'NO';
+        
+        // App Sandbox & Hardened Runtime (for macOS)
+        buildSettings.ENABLE_APP_SANDBOX = 'YES';
+        buildSettings.ENABLE_HARDENED_RUNTIME = 'YES';
+        buildSettings.ENABLE_OUTGOING_NETWORK_CONNECTIONS = 'YES';
+        
+        // App category
+        buildSettings.INFOPLIST_KEY_LSApplicationCategoryType = '"public.app-category.books"';
+        
+        // App groups
+        buildSettings.REGISTER_APP_GROUPS = 'YES';
+      }
+      
+      // Apply to share extension target configurations  
+      if (buildSettings.PRODUCT_BUNDLE_IDENTIFIER === 'com.anthist.app.ShareExtension' ||
+          buildSettings.PRODUCT_NAME === 'AnthistShareExtension') {
+        buildSettings.DEVELOPMENT_TEAM = 'G2WXN4J37T';
+        buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '15.1';
+        buildSettings.SUPPORTED_PLATFORMS = '"iphoneos iphonesimulator macosx"';
+        buildSettings.SUPPORTS_MACCATALYST = 'NO';
+        buildSettings.SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = 'NO';
+        buildSettings.SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = 'NO';
+        
+        if (name === 'Debug') {
+          buildSettings.ENABLE_APP_SANDBOX = 'YES';
+          buildSettings.ENABLE_HARDENED_RUNTIME = 'YES';
+          buildSettings.ENABLE_OUTGOING_NETWORK_CONNECTIONS = 'YES';
+          buildSettings.REGISTER_APP_GROUPS = 'YES';
+        }
+      }
+    }
+    
+    // Set project-level deployment target
+    const projectConfig = xcodeProject.pbxProjectSection();
+    for (const key in projectConfig) {
+      if (projectConfig[key]?.buildConfigurationList) {
+        const buildConfigListKey = projectConfig[key].buildConfigurationList;
+        const configList = xcodeProject.pbxXCConfigurationList()[buildConfigListKey];
+        if (configList) {
+          configList.buildConfigurations.forEach((configRef: { value: string }) => {
+            const config = configurations[configRef.value];
+            if (config?.buildSettings) {
+              config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '15.1';
+            }
+          });
+        }
+      }
+    }
+    
+    return config;
+  });
+};
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -18,11 +100,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.anthist.app',
-    // Share extension configuration
+    // Entitlements for app groups (shared with share extension)
+    entitlements: {
+      'com.apple.security.application-groups': ['group.com.anthist.app'],
+    },
+    // Info.plist configuration
     infoPlist: {
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true, // For WebView content
       },
+      // App group identifiers for share extension
+      AppGroup: 'group.com.anthist.app',
+      AppGroupIdentifier: 'group.com.anthist.app',
+      // Motion usage (for sensors)
+      NSMotionUsageDescription: 'Allow $(PRODUCT_NAME) to access your device motion',
+      // Minimum macOS version
+      LSMinimumSystemVersion: '12.0',
     },
   },
   android: {
@@ -97,6 +190,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ],
       },
     ],
+    // Custom Xcode build settings (development team, deployment target, macOS support, etc.)
+    withCustomXcodeSettings,
   ],
   experiments: {
     typedRoutes: true,
