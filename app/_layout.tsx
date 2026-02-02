@@ -1,17 +1,15 @@
+// IMPORTANT: This import MUST come first to configure Amplify before any clients are created
+import '@/lib/amplify-config';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/lib/store/authStore';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Amplify } from 'aws-amplify';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
-import amplifyConfig from '../amplify_outputs.json';
-
-// Configure Amplify with the outputs from sandbox/deployment
-Amplify.configure(amplifyConfig);
 
 export const unstable_settings = {
   initialRouteName: '(auth)',
