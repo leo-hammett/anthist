@@ -69,9 +69,9 @@ export default function ShareExtension({ url, text, title }: ShareExtensionProps
     setStatus('processing');
     setMessage('Adding to Anthist...');
 
-    // Open the main app with the URL to add
-    // The app will handle the content processing
-    openHostApp(`add-content?url=${encodeURIComponent(detectedUrl)}`);
+    // Open the main app and go directly to processing screen
+    // This bypasses the add-content screen for a smoother flow
+    openHostApp(`processing?url=${encodeURIComponent(detectedUrl)}`);
     
     // Brief delay before closing to ensure the deep link is processed
     setTimeout(() => {

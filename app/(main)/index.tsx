@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Platform, Pressable, StatusBar, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import SwipeContainer from '../../components/feed/SwipeContainer';
@@ -54,6 +54,9 @@ export default function FeedScreen() {
   const userId = useMemo(() => user?.cognitoId ?? null, [user?.cognitoId]);
   const hasSeenTutorial = useMemo(() => user?.hasSeenTutorial ?? true, [user?.hasSeenTutorial]);
 
+  // Track if we've done initial load
+  const hasLoadedRef = useRef(false);
+  
   // Initialize feed and telemetry
   useEffect(() => {
     if (userId) {
@@ -61,6 +64,7 @@ export default function FeedScreen() {
       fetchContents(userId).catch(err => {
         console.warn('Failed to fetch contents:', err);
       });
+      hasLoadedRef.current = true;
       
       // Show tutorial for new users
       if (!hasSeenTutorial) {
@@ -68,6 +72,45 @@ export default function FeedScreen() {
       }
     }
   }, [userId, hasSeenTutorial, fetchContents]);
+
+  // Refresh content when screen comes into focus (after initial load)
+  // This ensures newly added content is visible and "Processing..." titles are updated
+  useFocusEffect(
+    useCallback(() => {
+      // Only refresh if we've already loaded once (not the initial mount)
+      if (userId && hasLoadedRef.current) {
+        // Small delay to ensure any in-flight updates are complete
+        const timer = setTimeout(() => {
+          fetchContents(userId).catch(err => {
+            console.warn('Failed to refresh contents:', err);
+          });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }, [userId, fetchContents])
+  );
+
+  // Auto-refresh a few times after the screen focuses to catch processing content
+  // This helps update "Processing..." titles when content finishes processing
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      
+      // Schedule 3 refresh checks: at 2s, 5s, and 10s after focus
+      const refreshTimes = [2000, 5000, 10000];
+      const timers = refreshTimes.map(delay => 
+        setTimeout(() => {
+          fetchContents(userId).catch(err => {
+            console.warn('Failed to auto-refresh contents:', err);
+          });
+        }, delay)
+      );
+      
+      return () => {
+        timers.forEach(timer => clearTimeout(timer));
+      };
+    }, [userId, fetchContents])
+  );
 
   // Setup gyroscope for engagement tracking (native only)
   useEffect(() => {

@@ -156,9 +156,12 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
+      // Reset currentIndex to 0 to show newest content, but only if content exists
+      // This ensures after adding content, the user sees their new item first
       set({ 
         contents: mappedContents,
         rankedContentIds: mappedContents.map(c => c.id),
+        currentIndex: 0,
         isLoading: false,
       });
     } catch (error) {
@@ -233,6 +236,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         set((state) => ({
           contents: [mapped, ...state.contents],
           rankedContentIds: [mapped.id, ...state.rankedContentIds],
+          currentIndex: 0, // Reset to show the newly added content first
           isLoading: false,
         }));
 

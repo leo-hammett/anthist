@@ -146,10 +146,11 @@ export default function ProcessingScreen() {
         s3Key: processedData.s3Key ?? undefined,
       });
 
-      // Show success briefly then navigate back
+      // Show success briefly then navigate to main feed (replacing the stack)
       setState('success');
       setTimeout(() => {
-        router.back();
+        // Use replace to go directly to main feed, dismissing the add-content screen
+        router.replace('/(main)/');
       }, 800);
     } catch (err: any) {
       console.error('Processing error:', err);

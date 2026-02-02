@@ -27,16 +27,18 @@ export default function AddContentScreen() {
 
   const [url, setUrl] = useState('');
   
-  // Auto-populate and process URL from share extension
+  // Auto-populate and process URL from deep link (legacy support)
+  // Note: Share extension now goes directly to processing screen
   useEffect(() => {
     if (sharedUrl && isValidUrl(sharedUrl)) {
       setUrl(sharedUrl);
-      // Auto-process if URL came from share extension
+      // Auto-process if URL came from deep link
       const detected = detectContentType(sharedUrl);
       if (detected.type !== 'youtube_playlist' && user) {
         // Small delay to let the UI render first
         setTimeout(() => {
-          router.push({
+          // Use replace so add-content doesn't stay in the navigation stack
+          router.replace({
             pathname: '/(main)/processing',
             params: { url: sharedUrl },
           });

@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export const unstable_settings = {
   initialRouteName: '(auth)',
@@ -47,20 +48,24 @@ export default function RootLayout() {
   // Show loading screen while checking auth
   if (isLoading) {
     return (
-      <View style={[styles.loading, colorScheme === 'dark' && styles.loadingDark]}>
-        <ActivityIndicator size="large" color={colorScheme === 'dark' ? '#FFF' : '#000'} />
-      </View>
+      <SafeAreaProvider>
+        <View style={[styles.loading, colorScheme === 'dark' && styles.loadingDark]}>
+          <ActivityIndicator size="large" color={colorScheme === 'dark' ? '#FFF' : '#000'} />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(main)" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(main)" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
