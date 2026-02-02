@@ -90,6 +90,7 @@ Playlists are synced between everyone forever.
 - "You read 12 articles this week, 3 more than last week"
 - "Your favorite topic: Technology"
 - "Best reading day: Sunday morning"
+- we want to make a predictor of how focused the user is at each time and when
 
 ---
 
@@ -102,16 +103,15 @@ Playlists are synced between everyone forever.
 - Download content for offline reading
 - Automatic sync when online
 - Storage management
-- Selective download (favorites only, recent, custom)
+- Allow the user to decide how many articles to download at each point in time.
 
 ### Technical
 - Use Expo FileSystem for storage
 - Background download queue
-- Compression for storage efficiency
 
 ---
 
-## Browser Extension
+## Browser Extension - hopefully redundant.
 
 **Priority:** Low  
 **Complexity:** Medium
@@ -144,68 +144,6 @@ One-click saving from any browser.
 
 ---
 
-## AI Features
-
-**Priority:** Low (Experimental)  
-**Complexity:** High
-
-### Smart Summaries
-- AI-generated article summaries
-- Key points extraction
-- "Too long; didn't read" mode
-
-### Content Suggestions
-- "Based on what you've read, you might like..."
-- Topic clustering
-- Author discovery
-
-### Reading Assistant
-- Explain complex passages
-- Define terms inline
-- Related content suggestions
-
----
-
-## Premium Features (Monetization Ideas)
-
-### Potential Premium Perks
-- Unlimited favorites
-- Quote maker without watermark
-- Advanced analytics
-- Priority content processing
-- Custom themes creator
-- Family sharing (5 accounts)
-- Extended offline storage
-
-### Pricing Ideas
-- Free tier: Full functionality, basic limits
-- Premium: $4.99/month or $39.99/year
-- Family: $7.99/month or $59.99/year
-
----
-
-## Implementation Priority
-
-### Phase 1 (Next Release)
-1. Favorites system (low effort, high value)
-2. Quote maker - basic version (image export)
-
-### Phase 2
-3. Quote maker - full version (PDF, templates)
-4. Reading statistics
-5. Offline mode
-
-### Phase 3
-6. Browser extension
-7. Widgets
-8. Social features (beta)
-
-### Phase 4
-9. AI features (experimental)
-10. Premium tier
-
----
-
 ## Contributing Ideas
 
 Have a feature idea? We'd love to hear it!
@@ -215,3 +153,14 @@ Have a feature idea? We'd love to hear it!
 3. Describe the use case and why it matters
 
 Community-driven features get priority consideration.
+
+
+## Podcasts, music, notes collection, 
+
+Paylwlllaa
+
+paw
+
+paywall bypasser
+
+

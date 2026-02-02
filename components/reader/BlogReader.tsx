@@ -1,6 +1,6 @@
 import { downloadData } from 'aws-amplify/storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, NativeScrollEvent, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native';
 // Use ScrollView from gesture-handler for proper gesture coordination with carousel
 import { ScrollView } from 'react-native-gesture-handler';
 import RenderHtml from 'react-native-render-html';
@@ -22,6 +22,25 @@ interface BlogReaderProps {
     scrollPosition: number;
   };
   isActive: boolean;
+}
+
+/**
+ * Maps theme font family names to platform-specific font families.
+ * React Native doesn't recognize generic CSS font names, so we need
+ * to map them to actual iOS/Android font names.
+ */
+function getFontFamily(themeFontFamily: string): string | undefined {
+  const fontMap: Record<string, { ios: string; android: string }> = {
+    'System': { ios: 'System', android: 'sans-serif' },
+    'Georgia': { ios: 'Georgia', android: 'serif' },
+    'monospace': { ios: 'Menlo', android: 'monospace' },
+    'Helvetica': { ios: 'Helvetica', android: 'sans-serif' },
+  };
+  
+  const mapping = fontMap[themeFontFamily];
+  if (!mapping) return undefined;
+  
+  return Platform.OS === 'ios' ? mapping.ios : mapping.android;
 }
 
 export default function BlogReader({ content, isActive }: BlogReaderProps) {
@@ -258,9 +277,17 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
         <RenderHtml
           contentWidth={width - 48}
           source={{ html: htmlContent }}
+          // Constrain embedded content (images, iframes) to the content width
+          computeEmbeddedMaxWidth={() => width - 48}
+          // Enable experimental percent width for images
+          renderersProps={{
+            img: {
+              enableExperimentalPercentWidth: true,
+            },
+          }}
           baseStyle={{
             color: theme.textColor,
-            fontFamily: theme.fontFamily,
+            fontFamily: getFontFamily(theme.fontFamily),
             fontSize: theme.fontSize,
             lineHeight: theme.lineHeight,
           }}
@@ -269,24 +296,31 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
               fontSize: theme.fontSize * 1.8,
               fontWeight: '700',
               marginBottom: 16,
+              lineHeight: theme.fontSize * 1.8 * 1.3,
               color: theme.headingColor ?? theme.textColor,
+              fontFamily: getFontFamily(theme.fontFamily),
             },
             h2: {
               fontSize: theme.fontSize * 1.4,
               fontWeight: '600',
               marginTop: 24,
               marginBottom: 12,
+              lineHeight: theme.fontSize * 1.4 * 1.3,
               color: theme.headingColor ?? theme.textColor,
+              fontFamily: getFontFamily(theme.fontFamily),
             },
             h3: {
               fontSize: theme.fontSize * 1.2,
               fontWeight: '600',
               marginTop: 20,
               marginBottom: 10,
+              lineHeight: theme.fontSize * 1.2 * 1.3,
               color: theme.headingColor ?? theme.textColor,
+              fontFamily: getFontFamily(theme.fontFamily),
             },
             p: {
               marginBottom: 16,
+              fontFamily: getFontFamily(theme.fontFamily),
             },
             a: {
               color: theme.linkColor,
@@ -299,9 +333,10 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
               marginVertical: 16,
               fontStyle: 'italic',
               opacity: 0.9,
+              fontFamily: getFontFamily(theme.fontFamily),
             },
             code: {
-              fontFamily: 'monospace',
+              fontFamily: getFontFamily('monospace'),
               backgroundColor: theme.codeBackgroundColor ?? 'rgba(0,0,0,0.1)',
               paddingHorizontal: 6,
               paddingVertical: 2,
@@ -313,9 +348,10 @@ export default function BlogReader({ content, isActive }: BlogReaderProps) {
               padding: 16,
               borderRadius: 8,
               overflow: 'hidden',
+              fontFamily: getFontFamily('monospace'),
             },
             img: {
-              maxWidth: '100%',
+              maxWidth: width - 48,
               borderRadius: 8,
               marginVertical: 16,
             },
