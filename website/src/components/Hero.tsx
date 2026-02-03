@@ -43,10 +43,12 @@ export default function Hero() {
         {/* CTA Buttons */}
         <div className="animate-slide-up opacity-0 animation-delay-600 flex flex-col sm:flex-row gap-4 justify-center mb-16">
           <a
-            href="#get-started"
+            href="https://testflight.apple.com/join/D65MzCe9"
+            target="_blank"
+            rel="noopener noreferrer"
             className="group gradient-accent text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-all hover:scale-105 shadow-lg shadow-indigo-500/25"
           >
-            Get Early Access
+            Join Beta on TestFlight
             <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
           </a>
           <a

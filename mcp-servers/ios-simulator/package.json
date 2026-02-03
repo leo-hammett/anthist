@@ -1,0 +1,33 @@
+{
+  "name": "@anthist/ios-simulator-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for iOS Simulator control and performance testing",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "ios-simulator-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "tsc && node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "ios",
+    "simulator",
+    "testing",
+    "performance"
+  ],
+  "author": "Anthist",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
