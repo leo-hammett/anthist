@@ -1,6 +1,5 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
 import { ConfigPlugin, withXcodeProject } from 'expo/config-plugins';
-eas build --platform android
 // Config plugin to apply custom Xcode build settings
 const withCustomXcodeSettings: ConfigPlugin = (config) => {
   return withXcodeProject(config, async (config) => {
